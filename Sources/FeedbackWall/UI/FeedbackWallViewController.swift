@@ -11,6 +11,7 @@ final class FeedbackWallViewController: UIViewController {
     private let onDismiss: () -> Void
     
     private var answers: [String: String] = [:]
+    private var currentQuestionIndex: Int = 0
     private var questionViews: [SurveyQuestionView] = []
     
     // MARK: - UI Components
@@ -22,10 +23,18 @@ final class FeedbackWallViewController: UIViewController {
         return view
     }()
     
+    private lazy var scrollView: UIScrollView = {
+        let scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.showsVerticalScrollIndicator = true
+        scroll.alwaysBounceVertical = false
+        return scroll
+    }()
+    
     private lazy var cardView: UIView = {
         let view = UIView()
         view.backgroundColor = .systemBackground
-        view.layer.cornerRadius = survey.theme?.cornerRadius ?? 24
+        view.layer.cornerRadius = survey.theme?.cornerRadius ?? 16
         view.layer.masksToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -61,17 +70,57 @@ final class FeedbackWallViewController: UIViewController {
         return label
     }()
     
-    private lazy var questionsStackView: UIStackView = {
+    private lazy var questionContainerView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private lazy var progressLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 13)
+        label.textColor = .tertiaryLabel
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var buttonStackView: UIStackView = {
         let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 24
+        stack.axis = .horizontal
+        stack.spacing = 12
+        stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
     
+    private lazy var backButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Back", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
+        button.backgroundColor = .secondarySystemBackground
+        button.setTitleColor(.label, for: .normal)
+        button.layer.cornerRadius = 12
+        button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    private lazy var nextButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Next", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.backgroundColor = primaryColor
+        button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 12
+        button.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     private lazy var submitButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Send", for: .normal)
+        button.setTitle("Submit", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.backgroundColor = primaryColor
         button.setTitleColor(.white, for: .normal)
@@ -87,6 +136,8 @@ final class FeedbackWallViewController: UIViewController {
         }
         return .systemBlue
     }
+    
+    private var cardViewBottomConstraint: NSLayoutConstraint?
     
     // MARK: - Initialization
     
@@ -107,6 +158,12 @@ final class FeedbackWallViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupContent()
+        setupKeyboardObservers()
+        updateNavigationButtons()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - Setup
@@ -127,12 +184,26 @@ final class FeedbackWallViewController: UIViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dimViewTapped))
         dimView.addGestureRecognizer(tapGesture)
         
-        // Add card view
-        view.addSubview(cardView)
+        // Add scroll view
+        view.addSubview(scrollView)
         NSLayoutConstraint.activate([
-            cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -40)
+        ])
+        
+        // Add card view inside scroll view
+        scrollView.addSubview(cardView)
+        let bottomConstraint = cardView.bottomAnchor.constraint(lessThanOrEqualTo: scrollView.bottomAnchor)
+        cardViewBottomConstraint = bottomConstraint
+        
+        NSLayoutConstraint.activate([
+            cardView.topAnchor.constraint(greaterThanOrEqualTo: scrollView.topAnchor),
+            cardView.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor).withPriority(.defaultLow),
             cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            bottomConstraint
         ])
         
         // Add close button
@@ -160,22 +231,30 @@ final class FeedbackWallViewController: UIViewController {
             descriptionLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
         ])
         
-        // Add questions stack view
-        cardView.addSubview(questionsStackView)
+        // Add progress label
+        cardView.addSubview(progressLabel)
         NSLayoutConstraint.activate([
-            questionsStackView.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 24),
-            questionsStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            questionsStackView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
+            progressLabel.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 16),
+            progressLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
+            progressLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
         ])
         
-        // Add submit button
-        cardView.addSubview(submitButton)
+        // Add question container view
+        cardView.addSubview(questionContainerView)
         NSLayoutConstraint.activate([
-            submitButton.topAnchor.constraint(equalTo: questionsStackView.bottomAnchor, constant: 24),
-            submitButton.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            submitButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24),
-            submitButton.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -24),
-            submitButton.heightAnchor.constraint(equalToConstant: 50)
+            questionContainerView.topAnchor.constraint(equalTo: progressLabel.bottomAnchor, constant: 16),
+            questionContainerView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
+            questionContainerView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
+        ])
+        
+        // Add button stack view
+        cardView.addSubview(buttonStackView)
+        NSLayoutConstraint.activate([
+            buttonStackView.topAnchor.constraint(equalTo: questionContainerView.bottomAnchor, constant: 24),
+            buttonStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
+            buttonStackView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24),
+            buttonStackView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -24),
+            buttonStackView.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
     
@@ -184,27 +263,134 @@ final class FeedbackWallViewController: UIViewController {
         descriptionLabel.text = survey.description
         descriptionLabel.isHidden = survey.description == nil
         
-        // Add question views
+        // Create question views
         for question in survey.questions {
             let questionView = SurveyQuestionView(question: question)
             questionView.delegate = self
             questionView.applyTheme(survey.theme)
+            questionView.translatesAutoresizingMaskIntoConstraints = false
             questionViews.append(questionView)
-            questionsStackView.addArrangedSubview(questionView)
         }
+        
+        // Show first question
+        showQuestion(at: 0)
+    }
+    
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+    
+    // MARK: - Question Navigation
+    
+    private func showQuestion(at index: Int) {
+        guard index >= 0 && index < questionViews.count else { return }
+        
+        // Remove current question view
+        questionContainerView.subviews.forEach { $0.removeFromSuperview() }
+        
+        // Add new question view
+        let questionView = questionViews[index]
+        questionContainerView.addSubview(questionView)
+        NSLayoutConstraint.activate([
+            questionView.topAnchor.constraint(equalTo: questionContainerView.topAnchor),
+            questionView.leadingAnchor.constraint(equalTo: questionContainerView.leadingAnchor),
+            questionView.trailingAnchor.constraint(equalTo: questionContainerView.trailingAnchor),
+            questionView.bottomAnchor.constraint(equalTo: questionContainerView.bottomAnchor)
+        ])
+        
+        currentQuestionIndex = index
+        updateProgressLabel()
+        updateNavigationButtons()
+    }
+    
+    private func updateProgressLabel() {
+        let total = survey.questions.count
+        if total > 1 {
+            progressLabel.text = "Question \(currentQuestionIndex + 1) of \(total)"
+            progressLabel.isHidden = false
+        } else {
+            progressLabel.isHidden = true
+        }
+    }
+    
+    private func updateNavigationButtons() {
+        buttonStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        
+        let isFirstQuestion = currentQuestionIndex == 0
+        let isLastQuestion = currentQuestionIndex == survey.questions.count - 1
+        
+        if survey.questions.count == 1 {
+            // Single question - just show submit
+            buttonStackView.addArrangedSubview(submitButton)
+        } else if isFirstQuestion {
+            // First question - just show next
+            buttonStackView.addArrangedSubview(nextButton)
+        } else if isLastQuestion {
+            // Last question - show back and submit
+            buttonStackView.addArrangedSubview(backButton)
+            buttonStackView.addArrangedSubview(submitButton)
+        } else {
+            // Middle question - show back and next
+            buttonStackView.addArrangedSubview(backButton)
+            buttonStackView.addArrangedSubview(nextButton)
+        }
+    }
+    
+    // MARK: - Keyboard Handling
+    
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        
+        let keyboardHeight = keyboardFrame.height
+        scrollView.contentInset.bottom = keyboardHeight
+        scrollView.verticalScrollIndicatorInsets.bottom = keyboardHeight
+    }
+    
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        scrollView.contentInset.bottom = 0
+        scrollView.verticalScrollIndicatorInsets.bottom = 0
     }
     
     // MARK: - Actions
     
     @objc private func closeTapped() {
+        view.endEditing(true)
         dismissSurvey()
     }
     
     @objc private func dimViewTapped() {
+        view.endEditing(true)
         dismissSurvey()
     }
     
+    @objc private func backTapped() {
+        view.endEditing(true)
+        if currentQuestionIndex > 0 {
+            showQuestion(at: currentQuestionIndex - 1)
+        }
+    }
+    
+    @objc private func nextTapped() {
+        view.endEditing(true)
+        if currentQuestionIndex < survey.questions.count - 1 {
+            showQuestion(at: currentQuestionIndex + 1)
+        }
+    }
+    
     @objc private func submitTapped() {
+        view.endEditing(true)
+        
         // Collect all answers
         let surveyAnswers = answers.map { questionId, value in
             SurveyAnswer(questionId: questionId, value: value)
@@ -235,6 +421,15 @@ final class FeedbackWallViewController: UIViewController {
 extension FeedbackWallViewController: SurveyQuestionViewDelegate {
     func questionView(_ view: SurveyQuestionView, didSelectAnswer answer: String, for question: SurveyQuestion) {
         answers[question.id] = answer
+    }
+}
+
+// MARK: - NSLayoutConstraint Extension
+
+private extension NSLayoutConstraint {
+    func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
+        self.priority = priority
+        return self
     }
 }
 
@@ -269,4 +464,3 @@ private extension UIColor {
         }
     }
 }
-

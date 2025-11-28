@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// FeedbackWall iOS SDK - Main entry point.
 ///
@@ -114,12 +117,48 @@ public final class FeedbackWall {
     /// FeedbackWall.showIfAvailable(trigger: "purchase_completed")
     /// ```
     public static func showIfAvailable(trigger: String) {
+        // Guard against crashes - SDK must never crash the host app
+        do {
+            try performShowIfAvailable(trigger: trigger)
+        } catch {
+            Logger.error("Unexpected error in showIfAvailable: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Internal implementation of showIfAvailable that can throw.
+    private static func performShowIfAvailable(trigger: String) throws {
         guard currentConfig != nil else {
             Logger.warning("FeedbackWall.showIfAvailable called before configure(). Ignoring trigger: \(trigger)")
             return
         }
         
+        #if canImport(UIKit)
         SurveyManager.shared.handle(trigger: trigger)
+        #else
+        Logger.warning("FeedbackWall UI requires UIKit. Trigger ignored: \(trigger)")
+        #endif
+    }
+    
+    /// Checks if a survey is available for the given trigger without showing it.
+    ///
+    /// - Parameter trigger: The trigger identifier.
+    /// - Returns: The available Survey, or nil if no survey should be shown.
+    ///
+    /// ## Example
+    /// ```swift
+    /// Task {
+    ///     if let survey = await FeedbackWall.checkTrigger("feature_used") {
+    ///         print("Survey available: \(survey.title)")
+    ///     }
+    /// }
+    /// ```
+    public static func checkTrigger(_ trigger: String) async -> Survey? {
+        guard currentConfig != nil else {
+            Logger.warning("FeedbackWall.checkTrigger called before configure(). Ignoring trigger: \(trigger)")
+            return nil
+        }
+        
+        return await SurveyManager.shared.checkTrigger(trigger)
     }
     
     /// Resets the SDK state, clearing user identification.
@@ -130,4 +169,3 @@ public final class FeedbackWall {
         Logger.info("FeedbackWall SDK reset")
     }
 }
-

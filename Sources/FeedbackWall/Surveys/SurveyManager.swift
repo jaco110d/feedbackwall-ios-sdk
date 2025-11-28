@@ -32,16 +32,19 @@ final class SurveyManager {
         currentTrigger = trigger
         
         Task {
-            await checkAndShowSurvey(for: trigger)
+            if let survey = await checkTrigger(trigger) {
+                await showSurvey(survey, trigger: trigger)
+            }
         }
     }
     
-    // MARK: - Private Methods
-    
-    private func checkAndShowSurvey(for trigger: String) async {
+    /// Checks if a survey should be shown for the given trigger.
+    /// - Parameter trigger: The trigger identifier (e.g., "onboarding_completed").
+    /// - Returns: The Survey if one should be shown, otherwise nil.
+    func checkTrigger(_ trigger: String) async -> Survey? {
         guard let config = FeedbackWall.currentConfig else {
             Logger.warning("FeedbackWall not configured. Call configure() first.")
-            return
+            return nil
         }
         
         let request = TriggerCheckRequest(
@@ -53,25 +56,91 @@ final class SurveyManager {
             deviceLocale: config.deviceLocale
         )
         
-        let result: Result<TriggerCheckResponse, NetworkClient.NetworkError> = await NetworkClient.shared.post(
-            endpoint: "/sdk/triggers/check",
-            body: request
-        )
-        
-        switch result {
-        case .success(let response):
+        do {
+            let response: TriggerCheckResponse = try await NetworkClient.shared.post(
+                "/api/sdk/triggers/check",
+                body: request
+            )
+            
             if response.show, let survey = response.survey {
                 Logger.info("Survey available for trigger: \(trigger)")
-                await showSurvey(survey, trigger: trigger)
+                return survey
             } else {
                 Logger.debug("No survey to show for trigger: \(trigger)")
+                return nil
             }
-            
-        case .failure(let error):
+        } catch {
             // Fail silently as per PRD - no crash, no modal, only log
-            Logger.error("Failed to check trigger: \(error)")
+            Logger.error("Failed to check trigger: \(error.localizedDescription)")
+            return nil
         }
     }
+    
+    /// Submits survey responses to the backend.
+    /// - Parameters:
+    ///   - surveyId: The ID of the survey being responded to.
+    ///   - userId: The user ID, if identified.
+    ///   - trigger: The trigger that initiated the survey.
+    ///   - answers: The user's answers.
+    ///   - metadata: Device and app metadata.
+    func submitResponses(
+        surveyId: String,
+        userId: String?,
+        trigger: String,
+        answers: [SurveyAnswer],
+        metadata: SurveyResponseMetadata
+    ) async {
+        let submission = SurveyResponseSubmission(
+            surveyId: surveyId,
+            userId: userId,
+            trigger: trigger,
+            answers: answers,
+            metadata: metadata
+        )
+        
+        do {
+            let _: SurveySubmissionResponse = try await NetworkClient.shared.post(
+                "/api/sdk/responses",
+                body: submission
+            )
+            Logger.info("Survey response submitted successfully")
+        } catch {
+            // Fail silently - modal closes regardless
+            Logger.error("Failed to submit survey response: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Submits survey responses to the backend (convenience method).
+    /// - Parameters:
+    ///   - survey: The survey being responded to.
+    ///   - trigger: The trigger that initiated the survey.
+    ///   - answers: The user's answers.
+    func submitResponse(
+        for survey: Survey,
+        trigger: String,
+        answers: [SurveyAnswer]
+    ) async {
+        guard let config = FeedbackWall.currentConfig else {
+            Logger.warning("FeedbackWall not configured. Cannot submit response.")
+            return
+        }
+        
+        let metadata = SurveyResponseMetadata(
+            appVersion: config.appVersion,
+            platform: config.platform,
+            deviceLocale: config.deviceLocale
+        )
+        
+        await submitResponses(
+            surveyId: survey.id,
+            userId: UserSession.shared.userId,
+            trigger: trigger,
+            answers: answers,
+            metadata: metadata
+        )
+    }
+    
+    // MARK: - Private Methods
     
     @MainActor
     private func showSurvey(_ survey: Survey, trigger: String) {
@@ -97,46 +166,4 @@ final class SurveyManager {
         topViewController.present(surveyVC, animated: true)
         Logger.info("Presented survey: \(survey.id)")
     }
-    
-    /// Submits survey responses to the backend.
-    /// - Parameters:
-    ///   - survey: The survey being responded to.
-    ///   - trigger: The trigger that initiated the survey.
-    ///   - answers: The user's answers.
-    func submitResponse(
-        for survey: Survey,
-        trigger: String,
-        answers: [SurveyAnswer]
-    ) async {
-        guard let config = FeedbackWall.currentConfig else {
-            Logger.warning("FeedbackWall not configured. Cannot submit response.")
-            return
-        }
-        
-        let submission = SurveyResponseSubmission(
-            surveyId: survey.id,
-            userId: UserSession.shared.userId,
-            trigger: trigger,
-            answers: answers,
-            metadata: SurveyResponseMetadata(
-                appVersion: config.appVersion,
-                platform: config.platform,
-                deviceLocale: config.deviceLocale
-            )
-        )
-        
-        let result: Result<SurveySubmissionResponse, NetworkClient.NetworkError> = await NetworkClient.shared.post(
-            endpoint: "/sdk/responses",
-            body: submission
-        )
-        
-        switch result {
-        case .success:
-            Logger.info("Survey response submitted successfully")
-        case .failure(let error):
-            // Fail silently - modal closes regardless
-            Logger.error("Failed to submit survey response: \(error)")
-        }
-    }
 }
-

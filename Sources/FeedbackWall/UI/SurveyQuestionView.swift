@@ -14,6 +14,7 @@ final class SurveyQuestionView: UIView {
     weak var delegate: SurveyQuestionViewDelegate?
     
     private var selectedAnswer: String?
+    private var primaryColor: UIColor = .systemBlue
     
     // MARK: - UI Components
     
@@ -34,13 +35,26 @@ final class SurveyQuestionView: UIView {
         return stack
     }()
     
-    private lazy var textField: UITextField = {
-        let field = UITextField()
-        field.borderStyle = .roundedRect
-        field.font = .systemFont(ofSize: 16)
-        field.translatesAutoresizingMaskIntoConstraints = false
-        field.isHidden = true
-        return field
+    private lazy var textView: UITextView = {
+        let tv = UITextView()
+        tv.font = .systemFont(ofSize: 16)
+        tv.layer.borderColor = UIColor.separator.cgColor
+        tv.layer.borderWidth = 1
+        tv.layer.cornerRadius = 8
+        tv.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
+        tv.translatesAutoresizingMaskIntoConstraints = false
+        tv.isHidden = true
+        tv.delegate = self
+        return tv
+    }()
+    
+    private lazy var placeholderLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16)
+        label.textColor = .placeholderText
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        return label
     }()
     
     private var optionButtons: [UIButton] = []
@@ -102,40 +116,44 @@ final class SurveyQuestionView: UIView {
         addSubview(optionsStackView)
         optionsStackView.axis = .horizontal
         optionsStackView.distribution = .fillEqually
+        optionsStackView.spacing = 8
         
         NSLayoutConstraint.activate([
             optionsStackView.topAnchor.constraint(equalTo: questionLabel.bottomAnchor, constant: 16),
             optionsStackView.leadingAnchor.constraint(equalTo: leadingAnchor),
             optionsStackView.trailingAnchor.constraint(equalTo: trailingAnchor),
             optionsStackView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            optionsStackView.heightAnchor.constraint(equalToConstant: 44)
+            optionsStackView.heightAnchor.constraint(equalToConstant: 48)
         ])
         
         // Default 1-5 rating if no options provided
         let ratings = question.options ?? ["1", "2", "3", "4", "5"]
         
         for (index, rating) in ratings.enumerated() {
-            let button = createOptionButton(title: rating, tag: index)
-            button.layer.cornerRadius = 22
+            let button = createRatingButton(title: rating, tag: index)
             optionButtons.append(button)
             optionsStackView.addArrangedSubview(button)
         }
     }
     
     private func setupTextInput() {
-        textField.placeholder = question.placeholder ?? "Enter your response..."
-        textField.isHidden = false
-        addSubview(textField)
+        placeholderLabel.text = question.placeholder ?? "Enter your response..."
+        textView.isHidden = false
+        placeholderLabel.isHidden = false
+        
+        addSubview(textView)
+        addSubview(placeholderLabel)
         
         NSLayoutConstraint.activate([
-            textField.topAnchor.constraint(equalTo: questionLabel.bottomAnchor, constant: 16),
-            textField.leadingAnchor.constraint(equalTo: leadingAnchor),
-            textField.trailingAnchor.constraint(equalTo: trailingAnchor),
-            textField.bottomAnchor.constraint(equalTo: bottomAnchor),
-            textField.heightAnchor.constraint(equalToConstant: 44)
+            textView.topAnchor.constraint(equalTo: questionLabel.bottomAnchor, constant: 16),
+            textView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            textView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            textView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            textView.heightAnchor.constraint(equalToConstant: 100),
+            
+            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 12),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 13)
         ])
-        
-        textField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
     }
     
     private func createOptionButton(title: String, tag: Int) -> UIButton {
@@ -144,7 +162,24 @@ final class SurveyQuestionView: UIView {
         configuration.baseForegroundColor = .label
         configuration.baseBackgroundColor = .secondarySystemBackground
         configuration.cornerStyle = .medium
-        configuration.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
+        configuration.titleAlignment = .leading
+        
+        let button = UIButton(configuration: configuration)
+        button.tag = tag
+        button.contentHorizontalAlignment = .leading
+        button.addTarget(self, action: #selector(optionTapped(_:)), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }
+    
+    private func createRatingButton(title: String, tag: Int) -> UIButton {
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = title
+        configuration.baseForegroundColor = .label
+        configuration.baseBackgroundColor = .secondarySystemBackground
+        configuration.cornerStyle = .capsule
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
         
         let button = UIButton(configuration: configuration)
         button.tag = tag
@@ -166,20 +201,13 @@ final class SurveyQuestionView: UIView {
         
         // Select tapped button
         var selectedConfig = sender.configuration ?? UIButton.Configuration.filled()
-        selectedConfig.baseBackgroundColor = .systemBlue
+        selectedConfig.baseBackgroundColor = primaryColor
         selectedConfig.baseForegroundColor = .white
         sender.configuration = selectedConfig
         
         selectedAnswer = sender.configuration?.title
         
         if let answer = selectedAnswer {
-            delegate?.questionView(self, didSelectAnswer: answer, for: question)
-        }
-    }
-    
-    @objc private func textFieldDidChange() {
-        selectedAnswer = textField.text
-        if let answer = selectedAnswer, !answer.isEmpty {
             delegate?.questionView(self, didSelectAnswer: answer, for: question)
         }
     }
@@ -193,8 +221,61 @@ final class SurveyQuestionView: UIView {
     
     /// Applies theme styling to the question view.
     func applyTheme(_ theme: SurveyTheme?) {
-        // Theme application will be implemented when needed
-        // For now, using system defaults
+        if let hex = theme?.primaryColorHex, let color = UIColor(hex: hex) {
+            primaryColor = color
+        }
     }
 }
 
+// MARK: - UITextViewDelegate
+
+extension SurveyQuestionView: UITextViewDelegate {
+    func textViewDidChange(_ textView: UITextView) {
+        placeholderLabel.isHidden = !textView.text.isEmpty
+        selectedAnswer = textView.text
+        
+        if let answer = selectedAnswer, !answer.isEmpty {
+            delegate?.questionView(self, didSelectAnswer: answer, for: question)
+        }
+    }
+    
+    func textViewDidBeginEditing(_ textView: UITextView) {
+        textView.layer.borderColor = primaryColor.cgColor
+    }
+    
+    func textViewDidEndEditing(_ textView: UITextView) {
+        textView.layer.borderColor = UIColor.separator.cgColor
+    }
+}
+
+// MARK: - UIColor Extension
+
+private extension UIColor {
+    /// Creates a UIColor from a hex string.
+    convenience init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+        
+        var rgb: UInt64 = 0
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+        
+        let length = hexSanitized.count
+        guard length == 6 || length == 8 else { return nil }
+        
+        if length == 6 {
+            self.init(
+                red: CGFloat((rgb & 0xFF0000) >> 16) / 255.0,
+                green: CGFloat((rgb & 0x00FF00) >> 8) / 255.0,
+                blue: CGFloat(rgb & 0x0000FF) / 255.0,
+                alpha: 1.0
+            )
+        } else {
+            self.init(
+                red: CGFloat((rgb & 0xFF000000) >> 24) / 255.0,
+                green: CGFloat((rgb & 0x00FF0000) >> 16) / 255.0,
+                blue: CGFloat((rgb & 0x0000FF00) >> 8) / 255.0,
+                alpha: CGFloat(rgb & 0x000000FF) / 255.0
+            )
+        }
+    }
+}

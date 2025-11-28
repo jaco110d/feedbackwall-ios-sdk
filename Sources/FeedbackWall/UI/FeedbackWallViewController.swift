@@ -33,8 +33,8 @@ final class FeedbackWallViewController: UIViewController {
     
     private lazy var cardView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemBackground
-        view.layer.cornerRadius = survey.theme?.cornerRadius ?? 16
+        view.backgroundColor = ThemeColorResolver.backgroundColor(from: survey.theme)
+        view.layer.cornerRadius = ThemeCornerRadiusResolver.cardCornerRadius(from: survey.theme)
         view.layer.masksToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -52,8 +52,8 @@ final class FeedbackWallViewController: UIViewController {
     
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .label
+        label.font = ThemeFontFactory.titleFont(from: survey.theme)
+        label.textColor = ThemeColorResolver.textColor(from: survey.theme)
         label.numberOfLines = 0
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -62,8 +62,8 @@ final class FeedbackWallViewController: UIViewController {
     
     private lazy var descriptionLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 15)
-        label.textColor = .secondaryLabel
+        label.font = ThemeFontFactory.bodyFont(from: survey.theme)
+        label.textColor = ThemeColorResolver.textColor(from: survey.theme).withAlphaComponent(0.7)
         label.numberOfLines = 0
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -78,8 +78,8 @@ final class FeedbackWallViewController: UIViewController {
     
     private lazy var progressLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 13)
-        label.textColor = .tertiaryLabel
+        label.font = ThemeFontFactory.bodyFont(from: survey.theme).withSize(13)
+        label.textColor = ThemeColorResolver.textColor(from: survey.theme).withAlphaComponent(0.5)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -97,10 +97,10 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var backButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Back", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
+        button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme, weight: .medium)
         button.backgroundColor = .secondarySystemBackground
-        button.setTitleColor(.label, for: .normal)
-        button.layer.cornerRadius = 12
+        button.setTitleColor(ThemeColorResolver.textColor(from: survey.theme), for: .normal)
+        button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -109,10 +109,10 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var nextButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Next", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme)
         button.backgroundColor = primaryColor
-        button.setTitleColor(.white, for: .normal)
-        button.layer.cornerRadius = 12
+        button.setTitleColor(buttonTextColor, for: .normal)
+        button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -121,20 +121,21 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var submitButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Submit", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme)
         button.backgroundColor = primaryColor
-        button.setTitleColor(.white, for: .normal)
-        button.layer.cornerRadius = 12
+        button.setTitleColor(buttonTextColor, for: .normal)
+        button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(submitTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
     
     private var primaryColor: UIColor {
-        if let hex = survey.theme?.primaryColorHex {
-            return UIColor(hex: hex) ?? .systemBlue
-        }
-        return .systemBlue
+        ThemeColorResolver.primaryColor(from: survey.theme)
+    }
+    
+    private var buttonTextColor: UIColor {
+        ThemeColorResolver.buttonTextColor(from: survey.theme)
     }
     
     private var cardViewBottomConstraint: NSLayoutConstraint?
@@ -433,34 +434,3 @@ private extension NSLayoutConstraint {
     }
 }
 
-// MARK: - UIColor Extension
-
-private extension UIColor {
-    /// Creates a UIColor from a hex string.
-    convenience init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        
-        var rgb: UInt64 = 0
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        
-        let length = hexSanitized.count
-        guard length == 6 || length == 8 else { return nil }
-        
-        if length == 6 {
-            self.init(
-                red: CGFloat((rgb & 0xFF0000) >> 16) / 255.0,
-                green: CGFloat((rgb & 0x00FF00) >> 8) / 255.0,
-                blue: CGFloat(rgb & 0x0000FF) / 255.0,
-                alpha: 1.0
-            )
-        } else {
-            self.init(
-                red: CGFloat((rgb & 0xFF000000) >> 24) / 255.0,
-                green: CGFloat((rgb & 0x00FF0000) >> 16) / 255.0,
-                blue: CGFloat((rgb & 0x0000FF00) >> 8) / 255.0,
-                alpha: CGFloat(rgb & 0x000000FF) / 255.0
-            )
-        }
-    }
-}

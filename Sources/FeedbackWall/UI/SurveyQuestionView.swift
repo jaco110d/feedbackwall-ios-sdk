@@ -14,14 +14,20 @@ final class SurveyQuestionView: UIView {
     weak var delegate: SurveyQuestionViewDelegate?
     
     private var selectedAnswer: String?
+    private var theme: SurveyTheme?
+    
+    // Cached theme-derived values
     private var primaryColor: UIColor = .systemBlue
+    private var textColor: UIColor = .label
+    private var buttonTextColor: UIColor = .white
+    private var buttonCornerRadius: CGFloat = 12.0
     
     // MARK: - UI Components
     
     private lazy var questionLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 17, weight: .semibold)
-        label.textColor = .label
+        label.font = ThemeFontFactory.questionFont(from: theme)
+        label.textColor = textColor
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -37,7 +43,8 @@ final class SurveyQuestionView: UIView {
     
     private lazy var textView: UITextView = {
         let tv = UITextView()
-        tv.font = .systemFont(ofSize: 16)
+        tv.font = ThemeFontFactory.bodyFont(from: theme)
+        tv.textColor = textColor
         tv.layer.borderColor = UIColor.separator.cgColor
         tv.layer.borderWidth = 1
         tv.layer.cornerRadius = 8
@@ -50,7 +57,7 @@ final class SurveyQuestionView: UIView {
     
     private lazy var placeholderLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 16)
+        label.font = ThemeFontFactory.bodyFont(from: theme)
         label.textColor = .placeholderText
         label.translatesAutoresizingMaskIntoConstraints = false
         label.isHidden = true
@@ -159,11 +166,20 @@ final class SurveyQuestionView: UIView {
     private func createOptionButton(title: String, tag: Int) -> UIButton {
         var configuration = UIButton.Configuration.filled()
         configuration.title = title
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = textColor
         configuration.baseBackgroundColor = .secondarySystemBackground
-        configuration.cornerStyle = .medium
+        configuration.cornerStyle = .fixed
+        configuration.background.cornerRadius = buttonCornerRadius
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
         configuration.titleAlignment = .leading
+        
+        // Apply themed font
+        let buttonFont = ThemeFontFactory.bodyFont(from: theme)
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = buttonFont
+            return outgoing
+        }
         
         let button = UIButton(configuration: configuration)
         button.tag = tag
@@ -176,10 +192,18 @@ final class SurveyQuestionView: UIView {
     private func createRatingButton(title: String, tag: Int) -> UIButton {
         var configuration = UIButton.Configuration.filled()
         configuration.title = title
-        configuration.baseForegroundColor = .label
+        configuration.baseForegroundColor = textColor
         configuration.baseBackgroundColor = .secondarySystemBackground
         configuration.cornerStyle = .capsule
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8)
+        
+        // Apply themed font
+        let buttonFont = ThemeFontFactory.bodyFont(from: theme)
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = buttonFont
+            return outgoing
+        }
         
         let button = UIButton(configuration: configuration)
         button.tag = tag
@@ -195,14 +219,14 @@ final class SurveyQuestionView: UIView {
         optionButtons.forEach { button in
             var config = button.configuration ?? UIButton.Configuration.filled()
             config.baseBackgroundColor = .secondarySystemBackground
-            config.baseForegroundColor = .label
+            config.baseForegroundColor = textColor
             button.configuration = config
         }
         
         // Select tapped button
         var selectedConfig = sender.configuration ?? UIButton.Configuration.filled()
         selectedConfig.baseBackgroundColor = primaryColor
-        selectedConfig.baseForegroundColor = .white
+        selectedConfig.baseForegroundColor = buttonTextColor
         sender.configuration = selectedConfig
         
         selectedAnswer = sender.configuration?.title
@@ -220,9 +244,53 @@ final class SurveyQuestionView: UIView {
     }
     
     /// Applies theme styling to the question view.
+    /// Should be called before adding the view to the hierarchy for best results.
     func applyTheme(_ theme: SurveyTheme?) {
-        if let hex = theme?.primaryColorHex, let color = UIColor(hex: hex) {
-            primaryColor = color
+        self.theme = theme
+        
+        // Resolve theme colors
+        primaryColor = ThemeColorResolver.primaryColor(from: theme)
+        textColor = ThemeColorResolver.textColor(from: theme)
+        buttonTextColor = ThemeColorResolver.buttonTextColor(from: theme)
+        buttonCornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: theme)
+        
+        // Update existing UI elements
+        questionLabel.font = ThemeFontFactory.questionFont(from: theme)
+        questionLabel.textColor = textColor
+        
+        textView.font = ThemeFontFactory.bodyFont(from: theme)
+        textView.textColor = textColor
+        
+        placeholderLabel.font = ThemeFontFactory.bodyFont(from: theme)
+        
+        // Update option buttons with theme
+        updateOptionButtonsTheme()
+    }
+    
+    /// Updates all option buttons with current theme styling.
+    private func updateOptionButtonsTheme() {
+        for button in optionButtons {
+            var config = button.configuration ?? UIButton.Configuration.filled()
+            
+            // Determine if this button is selected (has primary color background)
+            let isSelected = config.baseBackgroundColor == primaryColor
+            
+            if isSelected {
+                config.baseBackgroundColor = primaryColor
+                config.baseForegroundColor = buttonTextColor
+            } else {
+                config.baseForegroundColor = textColor
+            }
+            
+            // Apply themed font to button
+            let buttonFont = ThemeFontFactory.bodyFont(from: theme)
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+                var outgoing = incoming
+                outgoing.font = buttonFont
+                return outgoing
+            }
+            
+            button.configuration = config
         }
     }
 }
@@ -248,34 +316,3 @@ extension SurveyQuestionView: UITextViewDelegate {
     }
 }
 
-// MARK: - UIColor Extension
-
-private extension UIColor {
-    /// Creates a UIColor from a hex string.
-    convenience init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        
-        var rgb: UInt64 = 0
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        
-        let length = hexSanitized.count
-        guard length == 6 || length == 8 else { return nil }
-        
-        if length == 6 {
-            self.init(
-                red: CGFloat((rgb & 0xFF0000) >> 16) / 255.0,
-                green: CGFloat((rgb & 0x00FF00) >> 8) / 255.0,
-                blue: CGFloat(rgb & 0x0000FF) / 255.0,
-                alpha: 1.0
-            )
-        } else {
-            self.init(
-                red: CGFloat((rgb & 0xFF000000) >> 24) / 255.0,
-                green: CGFloat((rgb & 0x00FF0000) >> 16) / 255.0,
-                blue: CGFloat((rgb & 0x0000FF00) >> 8) / 255.0,
-                alpha: CGFloat(rgb & 0x000000FF) / 255.0
-            )
-        }
-    }
-}

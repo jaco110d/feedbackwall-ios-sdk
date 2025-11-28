@@ -44,11 +44,48 @@ public enum SurveyQuestionType: String, Decodable {
 }
 
 /// Theme customization options for the survey UI.
+/// All properties are optional and fall back to sensible defaults when missing.
 public struct SurveyTheme: Decodable {
+    
+    // MARK: - Color Properties
+    
     /// Primary color in hex format (e.g., "#FF3366").
+    /// Used for primary button backgrounds and selected states.
     public let primaryColorHex: String?
     
-    /// Corner radius for cards and buttons.
+    /// Background color for the survey card in hex format.
+    public let backgroundColorHex: String?
+    
+    /// Text color for labels (title, description, question text) in hex format.
+    public let textColorHex: String?
+    
+    /// Button text color in hex format.
+    /// Falls back to white when primary color is dark.
+    public let buttonTextColorHex: String?
+    
+    // MARK: - Corner Radius Properties
+    
+    /// Corner radius for the main survey card.
     public let cornerRadius: Double?
+    
+    /// Corner radius for buttons.
+    /// Falls back to existing design if not provided.
+    public let buttonCornerRadius: Double?
+    
+    // MARK: - Typography Properties
+    
+    /// Font family for the survey UI.
+    /// Supported values: "system", "rounded", "serif", "monospaced".
+    /// Falls back to system font if not provided or unrecognized.
+    public let fontFamily: String?
+    
+    /// Font size for the main title label.
+    public let titleFontSize: Double?
+    
+    /// Font size for description, question text, and answer text.
+    public let bodyFontSize: Double?
+    
+    /// Font size for button titles.
+    public let buttonFontSize: Double?
 }
 

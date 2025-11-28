@@ -1,5 +1,6 @@
 # Xcode
 *.xcodeproj
+!FeedbackWallDemoApp/*.xcodeproj
 *.xcworkspace
 *.pbxuser
 !default.pbxuser

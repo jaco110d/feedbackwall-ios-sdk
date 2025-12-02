@@ -1,5 +1,6 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
+// Using 5.7 for broader Xcode compatibility (Xcode 14+)
 
 import PackageDescription
 
@@ -25,6 +26,7 @@ let package = Package(
             dependencies: ["FeedbackWall"],
             path: "Tests/FeedbackWallTests"
         ),
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
 

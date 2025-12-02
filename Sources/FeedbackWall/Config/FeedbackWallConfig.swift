@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Configuration container for the FeedbackWall SDK.
 /// Holds API credentials and device metadata used for all SDK operations.
@@ -17,6 +20,9 @@ public struct FeedbackWallConfig {
     
     /// The platform identifier (always "iOS" for this SDK).
     public let platform: String = "iOS"
+    
+    /// The platform with OS version (e.g., "iOS 17.0").
+    public let platformVersion: String
     
     /// The device's current locale identifier (e.g., "da-DK").
     public let deviceLocale: String
@@ -37,6 +43,9 @@ public struct FeedbackWallConfig {
         self.deviceLocale = Locale.current.identifier
         
         #if canImport(UIKit)
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+        self.platformVersion = "iOS \(osVersion.majorVersion).\(osVersion.minorVersion)"
+        
         var systemInfo = utsname()
         uname(&systemInfo)
         self.deviceModel = withUnsafePointer(to: &systemInfo.machine) {
@@ -45,6 +54,8 @@ public struct FeedbackWallConfig {
             }
         }
         #else
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+        self.platformVersion = "macOS \(osVersion.majorVersion).\(osVersion.minorVersion)"
         self.deviceModel = nil
         #endif
     }

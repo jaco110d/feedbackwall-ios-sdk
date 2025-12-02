@@ -72,6 +72,9 @@ public final class FeedbackWall {
         currentConfig = config
         NetworkClient.shared.configure(with: config)
         
+        // Send ping to verify SDK connection
+        NetworkClient.shared.ping()
+        
         Logger.info("FeedbackWall SDK configured with baseURL: \(baseURL.absoluteString)")
     }
     

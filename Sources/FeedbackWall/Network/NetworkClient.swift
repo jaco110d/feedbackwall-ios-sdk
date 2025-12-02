@@ -187,6 +187,69 @@ final class NetworkClient {
             return .failure(.networkError(error))
         }
     }
+    
+    // MARK: - Ping
+    
+    /// Sends a ping to the backend to verify SDK connection.
+    /// This is a fire-and-forget operation that doesn't block the app.
+    func ping() {
+        guard let config = config else {
+            Logger.error("NetworkClient not configured. Cannot send ping.")
+            return
+        }
+        
+        guard let url = URL(string: "/api/sdk/ping", relativeTo: config.baseURL) else {
+            Logger.error("Invalid URL for ping endpoint")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let pingRequest = PingRequest(
+            platform: config.platformVersion,
+            appVersion: config.appVersion,
+            deviceLocale: config.deviceLocale,
+            sdkVersion: "1.0.0"
+        )
+        
+        do {
+            let encoder = JSONEncoder()
+            request.httpBody = try encoder.encode(pingRequest)
+        } catch {
+            Logger.error("Failed to encode ping request: \(error)")
+            return
+        }
+        
+        // Fire-and-forget: use Task to avoid blocking
+        Task {
+            do {
+                let (_, response) = try await session.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse {
+                    if (200...299).contains(httpResponse.statusCode) {
+                        Logger.info("SDK ping successful")
+                    } else {
+                        Logger.warning("SDK ping returned status: \(httpResponse.statusCode)")
+                    }
+                }
+            } catch {
+                Logger.warning("SDK ping failed: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Ping Request Model
+
+/// Request body for the SDK ping endpoint.
+private struct PingRequest: Encodable {
+    let platform: String
+    let appVersion: String
+    let deviceLocale: String
+    let sdkVersion: String
 }
 
 // MARK: - AnyEncodable Helper

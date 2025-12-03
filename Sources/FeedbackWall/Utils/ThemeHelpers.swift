@@ -1,5 +1,43 @@
 import UIKit
 
+// MARK: - Theme Defaults
+
+/// Default values for survey theme properties.
+/// These values are used when theme fields are null or missing.
+enum SurveyThemeDefaults {
+    // Layout
+    static let layout: String = "popup"
+    
+    // Colors
+    static let primaryColorHex: String = "#C2662D"
+    static let backgroundColorHex: String = "#FFFBF7"
+    static let textColorHex: String = "#1A1A1A"
+    static let buttonTextColorHex: String = "#FFFFFF"
+    static let optionSelectedBackgroundHex: String = "#C2662D"
+    static let optionSelectedTextHex: String = "#FFFFFF"
+    
+    // Corner Radii
+    static let cornerRadius: CGFloat = 16
+    static let buttonCornerRadius: CGFloat = 10
+    
+    // Typography
+    static let fontFamily: String = "system"
+    static let fontSize: CGFloat = 14
+    static let textAlign: String = "left"
+    static let titleFontSize: CGFloat = 18
+    static let bodyFontSize: CGFloat = 14
+    static let buttonFontSize: CGFloat = 15
+    
+    // Spacing
+    static let contentPadding: CGFloat = 20
+    
+    // Display Settings
+    static let delaySeconds: Int = 0
+    static let showCloseButton: Bool = true
+    static let entranceAnimation: String = "slideFromBottom"
+    static let animationSpeed: String = "normal"
+}
+
 // MARK: - UIColor Hex Extension
 
 extension UIColor {
@@ -53,22 +91,60 @@ extension UIColor {
     }
 }
 
+// MARK: - Entrance Animation
+
+/// Entrance animation types for survey presentation.
+enum EntranceAnimation: String {
+    case slideFromBottom
+    case slideFromTop
+    case slideFromLeft
+    case slideFromRight
+    case fadeIn
+    case scale
+    case none
+    
+    /// Creates an EntranceAnimation from a string, with default fallback.
+    init(from string: String?) {
+        if let string = string, let animation = EntranceAnimation(rawValue: string) {
+            self = animation
+        } else {
+            self = .slideFromBottom
+        }
+    }
+}
+
+// MARK: - Animation Speed
+
+/// Animation speed options for survey transitions.
+enum AnimationSpeed: String {
+    case fast
+    case normal
+    case slow
+    
+    /// The duration in seconds for this animation speed.
+    var duration: TimeInterval {
+        switch self {
+        case .fast: return 0.5
+        case .normal: return 0.75
+        case .slow: return 1.0
+        }
+    }
+    
+    /// Creates an AnimationSpeed from a string, with default fallback.
+    init(from string: String?) {
+        if let string = string, let speed = AnimationSpeed(rawValue: string) {
+            self = speed
+        } else {
+            self = .normal
+        }
+    }
+}
+
 // MARK: - Theme Font Factory
 
 /// Factory for creating themed fonts based on SurveyTheme configuration.
 /// Provides a centralized way to generate fonts with the correct family and size.
 enum ThemeFontFactory {
-    
-    // MARK: - Default Sizes
-    
-    /// Default font size for titles.
-    static let defaultTitleSize: CGFloat = 22.0
-    
-    /// Default font size for body text (description, questions, answers).
-    static let defaultBodySize: CGFloat = 16.0
-    
-    /// Default font size for button titles.
-    static let defaultButtonSize: CGFloat = 17.0
     
     // MARK: - Font Creation
     
@@ -78,7 +154,7 @@ enum ThemeFontFactory {
     ///   - weight: The font weight. Defaults to `.bold`.
     /// - Returns: A configured UIFont.
     static func titleFont(from theme: SurveyTheme?, weight: UIFont.Weight = .bold) -> UIFont {
-        let size = validatedSize(theme?.titleFontSize, default: defaultTitleSize)
+        let size = validatedSize(theme?.titleFontSize, default: SurveyThemeDefaults.titleFontSize)
         return makeFont(family: theme?.fontFamily, size: size, weight: weight)
     }
     
@@ -89,7 +165,17 @@ enum ThemeFontFactory {
     ///   - weight: The font weight. Defaults to `.regular`.
     /// - Returns: A configured UIFont.
     static func bodyFont(from theme: SurveyTheme?, weight: UIFont.Weight = .regular) -> UIFont {
-        let size = validatedSize(theme?.bodyFontSize, default: defaultBodySize)
+        let size = validatedSize(theme?.bodyFontSize, default: SurveyThemeDefaults.bodyFontSize)
+        return makeFont(family: theme?.fontFamily, size: size, weight: weight)
+    }
+    
+    /// Creates a base font (used for options) based on theme configuration.
+    /// - Parameters:
+    ///   - theme: The survey theme (optional).
+    ///   - weight: The font weight. Defaults to `.regular`.
+    /// - Returns: A configured UIFont.
+    static func baseFont(from theme: SurveyTheme?, weight: UIFont.Weight = .regular) -> UIFont {
+        let size = validatedSize(theme?.fontSize, default: SurveyThemeDefaults.fontSize)
         return makeFont(family: theme?.fontFamily, size: size, weight: weight)
     }
     
@@ -99,16 +185,16 @@ enum ThemeFontFactory {
     ///   - weight: The font weight. Defaults to `.semibold`.
     /// - Returns: A configured UIFont.
     static func buttonFont(from theme: SurveyTheme?, weight: UIFont.Weight = .semibold) -> UIFont {
-        let size = validatedSize(theme?.buttonFontSize, default: defaultButtonSize)
+        let size = validatedSize(theme?.buttonFontSize, default: SurveyThemeDefaults.buttonFontSize)
         return makeFont(family: theme?.fontFamily, size: size, weight: weight)
     }
     
     /// Creates a question text font based on the theme configuration.
-    /// Uses body size with semibold weight.
+    /// Uses title size with semibold weight.
     /// - Parameter theme: The survey theme (optional).
     /// - Returns: A configured UIFont.
     static func questionFont(from theme: SurveyTheme?) -> UIFont {
-        let size = validatedSize(theme?.bodyFontSize, default: defaultBodySize)
+        let size = validatedSize(theme?.titleFontSize, default: SurveyThemeDefaults.titleFontSize)
         return makeFont(family: theme?.fontFamily, size: size, weight: .semibold)
     }
     
@@ -145,7 +231,7 @@ enum ThemeFontFactory {
             return baseFont
             
         case "rounded":
-            // Use rounded system font design
+            // Use rounded system font design (SF Rounded)
             if let descriptor = baseFont.fontDescriptor.withDesign(.rounded) {
                 return UIFont(descriptor: descriptor, size: size)
             }
@@ -153,19 +239,27 @@ enum ThemeFontFactory {
             return baseFont
             
         case "serif":
-            // Use serif system font design
+            // Use serif system font design (New York)
             if let descriptor = baseFont.fontDescriptor.withDesign(.serif) {
                 return UIFont(descriptor: descriptor, size: size)
             }
             Logger.warning("Failed to create serif font, using system font")
             return baseFont
             
-        case "monospaced":
-            // Use monospaced system font design
-            if let descriptor = baseFont.fontDescriptor.withDesign(.monospaced) {
+        case "mono", "monospaced":
+            // Use monospaced system font (SF Mono)
+            return UIFont.monospacedSystemFont(ofSize: size, weight: weight)
+            
+        case "casual":
+            // Use a casual font - fallback to rounded if Marker Felt unavailable
+            if let markerFelt = UIFont(name: "MarkerFelt-Wide", size: size) {
+                return markerFelt
+            }
+            // Fallback to rounded
+            if let descriptor = baseFont.fontDescriptor.withDesign(.rounded) {
                 return UIFont(descriptor: descriptor, size: size)
             }
-            Logger.warning("Failed to create monospaced font, using system font")
+            Logger.warning("Failed to create casual font, using system font")
             return baseFont
             
         default:
@@ -181,23 +275,6 @@ enum ThemeFontFactory {
 /// Centralizes color resolution logic and provides sensible defaults.
 enum ThemeColorResolver {
     
-    // MARK: - Default Colors
-    
-    /// Default primary color (system blue).
-    static var defaultPrimaryColor: UIColor { .systemBlue }
-    
-    /// Default background color for the survey card.
-    static var defaultBackgroundColor: UIColor { .systemBackground }
-    
-    /// Default text color for labels.
-    static var defaultTextColor: UIColor { .label }
-    
-    /// Default secondary text color.
-    static var defaultSecondaryTextColor: UIColor { .secondaryLabel }
-    
-    /// Default button text color.
-    static var defaultButtonTextColor: UIColor { .white }
-    
     // MARK: - Color Resolution
     
     /// Resolves the primary color from theme.
@@ -205,12 +282,12 @@ enum ThemeColorResolver {
     /// - Returns: The resolved primary UIColor.
     static func primaryColor(from theme: SurveyTheme?) -> UIColor {
         guard let hex = theme?.primaryColorHex else {
-            return defaultPrimaryColor
+            return UIColor(hex: SurveyThemeDefaults.primaryColorHex)!
         }
         
         guard let color = UIColor(hex: hex) else {
             Logger.warning("Failed to parse primaryColorHex '\(hex)', using default")
-            return defaultPrimaryColor
+            return UIColor(hex: SurveyThemeDefaults.primaryColorHex)!
         }
         
         return color
@@ -221,12 +298,12 @@ enum ThemeColorResolver {
     /// - Returns: The resolved background UIColor.
     static func backgroundColor(from theme: SurveyTheme?) -> UIColor {
         guard let hex = theme?.backgroundColorHex else {
-            return defaultBackgroundColor
+            return UIColor(hex: SurveyThemeDefaults.backgroundColorHex)!
         }
         
         guard let color = UIColor(hex: hex) else {
             Logger.warning("Failed to parse backgroundColorHex '\(hex)', using default")
-            return defaultBackgroundColor
+            return UIColor(hex: SurveyThemeDefaults.backgroundColorHex)!
         }
         
         return color
@@ -237,29 +314,84 @@ enum ThemeColorResolver {
     /// - Returns: The resolved text UIColor.
     static func textColor(from theme: SurveyTheme?) -> UIColor {
         guard let hex = theme?.textColorHex else {
-            return defaultTextColor
+            return UIColor(hex: SurveyThemeDefaults.textColorHex)!
         }
         
         guard let color = UIColor(hex: hex) else {
             Logger.warning("Failed to parse textColorHex '\(hex)', using default")
-            return defaultTextColor
+            return UIColor(hex: SurveyThemeDefaults.textColorHex)!
         }
         
         return color
     }
     
     /// Resolves the button text color from theme.
-    /// Falls back to white if primary color is dark, black otherwise.
     /// - Parameter theme: The survey theme (optional).
     /// - Returns: The resolved button text UIColor.
     static func buttonTextColor(from theme: SurveyTheme?) -> UIColor {
-        if let hex = theme?.buttonTextColorHex, let color = UIColor(hex: hex) {
-            return color
+        guard let hex = theme?.buttonTextColorHex else {
+            return UIColor(hex: SurveyThemeDefaults.buttonTextColorHex)!
         }
         
-        // Auto-determine based on primary color luminance
-        let primary = primaryColor(from: theme)
-        return primary.isDark ? .white : .black
+        guard let color = UIColor(hex: hex) else {
+            Logger.warning("Failed to parse buttonTextColorHex '\(hex)', using default")
+            return UIColor(hex: SurveyThemeDefaults.buttonTextColorHex)!
+        }
+        
+        return color
+    }
+    
+    /// Resolves the selected option background color from theme.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The resolved selected option background UIColor.
+    static func optionSelectedBackground(from theme: SurveyTheme?) -> UIColor {
+        if let hex = theme?.optionSelectedBackgroundHex, let color = UIColor(hex: hex) {
+            return color
+        }
+        // Default to primary color
+        return primaryColor(from: theme)
+    }
+    
+    /// Resolves the selected option text color from theme.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The resolved selected option text UIColor.
+    static func optionSelectedText(from theme: SurveyTheme?) -> UIColor {
+        if let hex = theme?.optionSelectedTextHex, let color = UIColor(hex: hex) {
+            return color
+        }
+        return UIColor(hex: SurveyThemeDefaults.optionSelectedTextHex)!
+    }
+    
+    /// Returns the unselected option background color.
+    /// Derived from text color with 8% opacity.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The unselected option background UIColor.
+    static func optionUnselectedBackground(from theme: SurveyTheme?) -> UIColor {
+        return textColor(from: theme).withAlphaComponent(0.08)
+    }
+    
+    /// Returns the unselected option border color.
+    /// Derived from text color with 30% opacity.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The unselected option border UIColor.
+    static func optionUnselectedBorder(from theme: SurveyTheme?) -> UIColor {
+        return textColor(from: theme).withAlphaComponent(0.30)
+    }
+    
+    /// Returns the label color (e.g., "Quick question" label).
+    /// Derived from text color with 60% opacity.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The label UIColor.
+    static func labelColor(from theme: SurveyTheme?) -> UIColor {
+        return textColor(from: theme).withAlphaComponent(0.60)
+    }
+    
+    /// Returns the close button color.
+    /// Derived from text color with 60% opacity.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The close button UIColor.
+    static func closeButtonColor(from theme: SurveyTheme?) -> UIColor {
+        return textColor(from: theme).withAlphaComponent(0.60)
     }
 }
 
@@ -268,22 +400,24 @@ enum ThemeColorResolver {
 /// Resolves corner radius values from SurveyTheme with safe fallbacks.
 enum ThemeCornerRadiusResolver {
     
-    // MARK: - Default Values
-    
-    /// Default corner radius for the main card.
-    static let defaultCardRadius: CGFloat = 16.0
-    
-    /// Default corner radius for buttons.
-    static let defaultButtonRadius: CGFloat = 12.0
-    
     // MARK: - Resolution
     
     /// Resolves the card corner radius from theme.
-    /// - Parameter theme: The survey theme (optional).
+    /// Returns 0 for fullscreen layout.
+    /// - Parameters:
+    ///   - theme: The survey theme (optional).
+    ///   - layout: The layout mode (optional, derived from theme if not provided).
     /// - Returns: The resolved corner radius.
-    static func cardCornerRadius(from theme: SurveyTheme?) -> CGFloat {
+    static func cardCornerRadius(from theme: SurveyTheme?, layout: String? = nil) -> CGFloat {
+        let layoutMode = layout ?? theme?.layout ?? SurveyThemeDefaults.layout
+        
+        // Fullscreen layout ignores corner radius
+        if layoutMode == "fullscreen" {
+            return 0
+        }
+        
         guard let radius = theme?.cornerRadius, radius >= 0 else {
-            return defaultCardRadius
+            return SurveyThemeDefaults.cornerRadius
         }
         // Clamp to reasonable bounds (0 - 50)
         return CGFloat(min(50, radius))
@@ -294,10 +428,85 @@ enum ThemeCornerRadiusResolver {
     /// - Returns: The resolved corner radius.
     static func buttonCornerRadius(from theme: SurveyTheme?) -> CGFloat {
         guard let radius = theme?.buttonCornerRadius, radius >= 0 else {
-            return defaultButtonRadius
+            return SurveyThemeDefaults.buttonCornerRadius
         }
         // Clamp to reasonable bounds (0 - 50)
         return CGFloat(min(50, radius))
     }
 }
 
+// MARK: - Layout Resolver
+
+/// Resolves layout-related values from SurveyTheme.
+enum ThemeLayoutResolver {
+    
+    /// Returns whether the survey should use fullscreen layout.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: True if fullscreen, false for popup.
+    static func isFullscreen(from theme: SurveyTheme?) -> Bool {
+        let layout = theme?.layout ?? SurveyThemeDefaults.layout
+        return layout == "fullscreen"
+    }
+    
+    /// Returns the content padding from theme.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The content padding in points.
+    static func contentPadding(from theme: SurveyTheme?) -> CGFloat {
+        guard let padding = theme?.contentPadding, padding >= 0 else {
+            return SurveyThemeDefaults.contentPadding
+        }
+        // Clamp to reasonable bounds (0 - 60)
+        return CGFloat(min(60, padding))
+    }
+    
+    /// Returns the text alignment from theme.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The NSTextAlignment value.
+    static func textAlignment(from theme: SurveyTheme?) -> NSTextAlignment {
+        let align = theme?.textAlign ?? SurveyThemeDefaults.textAlign
+        switch align {
+        case "center":
+            return .center
+        default:
+            return .natural
+        }
+    }
+}
+
+// MARK: - Display Settings Resolver
+
+/// Resolves display settings from SurveyTheme.
+enum ThemeDisplayResolver {
+    
+    /// Returns the delay in seconds before showing the survey.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The delay in seconds (0-30).
+    static func delaySeconds(from theme: SurveyTheme?) -> Int {
+        guard let delay = theme?.delaySeconds, delay >= 0 else {
+            return SurveyThemeDefaults.delaySeconds
+        }
+        // Clamp to 0-30 seconds
+        return min(30, delay)
+    }
+    
+    /// Returns whether the close button should be shown.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: True if close button should be visible.
+    static func showCloseButton(from theme: SurveyTheme?) -> Bool {
+        return theme?.showCloseButton ?? SurveyThemeDefaults.showCloseButton
+    }
+    
+    /// Returns the entrance animation type.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The EntranceAnimation value.
+    static func entranceAnimation(from theme: SurveyTheme?) -> EntranceAnimation {
+        return EntranceAnimation(from: theme?.entranceAnimation)
+    }
+    
+    /// Returns the animation speed.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The AnimationSpeed value.
+    static func animationSpeed(from theme: SurveyTheme?) -> AnimationSpeed {
+        return AnimationSpeed(from: theme?.animationSpeed)
+    }
+}

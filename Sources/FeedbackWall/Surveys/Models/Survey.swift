@@ -51,10 +51,15 @@ public enum SurveyQuestionType: String, Decodable {
 /// All properties are optional and fall back to sensible defaults when missing.
 public struct SurveyTheme: Decodable {
     
+    // MARK: - Layout Properties
+    
+    /// Layout mode: "popup" (centered card with overlay) or "fullscreen".
+    public let layout: String?
+    
     // MARK: - Color Properties
     
-    /// Primary color in hex format (e.g., "#FF3366").
-    /// Used for primary button backgrounds and selected states.
+    /// Primary color in hex format (e.g., "#C2662D").
+    /// Used for submit button background and active elements.
     public let primaryColorHex: String?
     
     /// Background color for the survey card in hex format.
@@ -64,32 +69,59 @@ public struct SurveyTheme: Decodable {
     public let textColorHex: String?
     
     /// Button text color in hex format.
-    /// Falls back to white when primary color is dark.
     public let buttonTextColorHex: String?
+    
+    /// Background color for selected multiple choice options.
+    public let optionSelectedBackgroundHex: String?
+    
+    /// Text color for selected multiple choice options.
+    public let optionSelectedTextHex: String?
     
     // MARK: - Corner Radius Properties
     
-    /// Corner radius for the main survey card.
+    /// Corner radius for the main survey card (only used for layout: "popup").
     public let cornerRadius: Double?
     
     /// Corner radius for buttons.
-    /// Falls back to existing design if not provided.
     public let buttonCornerRadius: Double?
     
     // MARK: - Typography Properties
     
-    /// Font family for the survey UI.
-    /// Supported values: "system", "rounded", "serif", "monospaced".
-    /// Falls back to system font if not provided or unrecognized.
+    /// Font family: "system", "rounded", "serif", "mono", "casual".
     public let fontFamily: String?
     
-    /// Font size for the main title label.
+    /// Base font size (used for options, body text).
+    public let fontSize: Double?
+    
+    /// Text alignment: "left" or "center".
+    public let textAlign: String?
+    
+    /// Font size for the title/question text.
     public let titleFontSize: Double?
     
-    /// Font size for description, question text, and answer text.
+    /// Font size for description and labels.
     public let bodyFontSize: Double?
     
     /// Font size for button titles.
     public let buttonFontSize: Double?
+    
+    // MARK: - Spacing Properties
+    
+    /// Content padding inside the survey card (all sides).
+    public let contentPadding: Double?
+    
+    // MARK: - Display Settings
+    
+    /// Delay in seconds before showing the survey (0-30).
+    public let delaySeconds: Int?
+    
+    /// Whether to show the close button. If false, user must complete the survey.
+    public let showCloseButton: Bool?
+    
+    /// Entrance animation type.
+    /// Supported: "slideFromBottom", "slideFromTop", "slideFromLeft", "slideFromRight", "fadeIn", "scale", "none".
+    public let entranceAnimation: String?
+    
+    /// Animation speed: "fast" (0.5s), "normal" (0.75s), "slow" (1.0s).
+    public let animationSpeed: String?
 }
-

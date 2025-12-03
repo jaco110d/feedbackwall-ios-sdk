@@ -148,8 +148,30 @@ final class SurveyManager {
     
     @MainActor
     private func showSurvey(_ survey: Survey, trigger: String) {
+        // Apply delay if configured
+        let delaySeconds = ThemeDisplayResolver.delaySeconds(from: survey.theme)
+        
+        if delaySeconds > 0 {
+            Logger.debug("Delaying survey presentation by \(delaySeconds) seconds")
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
+                presentSurvey(survey, trigger: trigger)
+            }
+        } else {
+            presentSurvey(survey, trigger: trigger)
+        }
+    }
+    
+    @MainActor
+    private func presentSurvey(_ survey: Survey, trigger: String) {
         guard let topViewController = TopViewControllerFinder.find() else {
             Logger.error("Could not find top view controller to present survey")
+            return
+        }
+        
+        // Double-check we're not already showing a survey (in case of race condition with delay)
+        guard !isShowingSurvey else {
+            Logger.debug("Already showing a survey, skipping delayed presentation")
             return
         }
         
@@ -167,7 +189,10 @@ final class SurveyManager {
         surveyVC.modalPresentationStyle = .overFullScreen
         surveyVC.modalTransitionStyle = .crossDissolve
         
-        topViewController.present(surveyVC, animated: true)
+        topViewController.present(surveyVC, animated: false) {
+            // Trigger entrance animation after presentation
+            surveyVC.performEntranceAnimation()
+        }
         Logger.info("Presented survey: \(survey.id)")
     }
 }

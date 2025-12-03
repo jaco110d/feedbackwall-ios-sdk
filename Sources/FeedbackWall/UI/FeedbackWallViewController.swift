@@ -1,7 +1,7 @@
 import UIKit
 
 /// The main view controller for displaying a FeedbackWall survey.
-/// Presented modally with a dark dim background and a centered card.
+/// Supports both popup (centered card with overlay) and fullscreen layouts.
 final class FeedbackWallViewController: UIViewController {
     
     // MARK: - Properties
@@ -14,12 +14,38 @@ final class FeedbackWallViewController: UIViewController {
     private var currentQuestionIndex: Int = 0
     private var questionViews: [SurveyQuestionView] = []
     
+    // Theme-derived properties
+    private var isFullscreen: Bool {
+        ThemeLayoutResolver.isFullscreen(from: survey.theme)
+    }
+    
+    private var contentPadding: CGFloat {
+        ThemeLayoutResolver.contentPadding(from: survey.theme)
+    }
+    
+    private var textAlignment: NSTextAlignment {
+        ThemeLayoutResolver.textAlignment(from: survey.theme)
+    }
+    
+    private var showsCloseButton: Bool {
+        ThemeDisplayResolver.showCloseButton(from: survey.theme)
+    }
+    
+    private var entranceAnimation: EntranceAnimation {
+        ThemeDisplayResolver.entranceAnimation(from: survey.theme)
+    }
+    
+    private var animationSpeed: AnimationSpeed {
+        ThemeDisplayResolver.animationSpeed(from: survey.theme)
+    }
+    
     // MARK: - UI Components
     
     private lazy var dimView: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.alpha = 0
         return view
     }()
     
@@ -42,12 +68,25 @@ final class FeedbackWallViewController: UIViewController {
     
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        button.setImage(UIImage(systemName: "xmark.circle.fill", withConfiguration: config), for: .normal)
-        button.tintColor = .secondaryLabel
+        button.setTitle("×", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 24, weight: .medium)
+        button.tintColor = ThemeColorResolver.closeButtonColor(from: survey.theme)
+        button.backgroundColor = .clear
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
+        // Add hover/tap background effect
+        button.layer.cornerRadius = 14
         return button
+    }()
+    
+    private lazy var headerLabel: UILabel = {
+        let label = UILabel()
+        label.text = "💬 Quick question"
+        label.font = ThemeFontFactory.bodyFont(from: survey.theme)
+        label.textColor = ThemeColorResolver.labelColor(from: survey.theme)
+        label.textAlignment = textAlignment
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
     
     private lazy var titleLabel: UILabel = {
@@ -55,7 +94,7 @@ final class FeedbackWallViewController: UIViewController {
         label.font = ThemeFontFactory.titleFont(from: survey.theme)
         label.textColor = ThemeColorResolver.textColor(from: survey.theme)
         label.numberOfLines = 0
-        label.textAlignment = .center
+        label.textAlignment = textAlignment
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -65,7 +104,7 @@ final class FeedbackWallViewController: UIViewController {
         label.font = ThemeFontFactory.bodyFont(from: survey.theme)
         label.textColor = ThemeColorResolver.textColor(from: survey.theme).withAlphaComponent(0.7)
         label.numberOfLines = 0
-        label.textAlignment = .center
+        label.textAlignment = textAlignment
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -79,8 +118,8 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var progressLabel: UILabel = {
         let label = UILabel()
         label.font = ThemeFontFactory.bodyFont(from: survey.theme).withSize(13)
-        label.textColor = ThemeColorResolver.textColor(from: survey.theme).withAlphaComponent(0.5)
-        label.textAlignment = .center
+        label.textColor = ThemeColorResolver.labelColor(from: survey.theme)
+        label.textAlignment = textAlignment
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -98,7 +137,7 @@ final class FeedbackWallViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Back", for: .normal)
         button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme, weight: .medium)
-        button.backgroundColor = .secondarySystemBackground
+        button.backgroundColor = ThemeColorResolver.optionUnselectedBackground(from: survey.theme)
         button.setTitleColor(ThemeColorResolver.textColor(from: survey.theme), for: .normal)
         button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
@@ -161,6 +200,7 @@ final class FeedbackWallViewController: UIViewController {
         setupContent()
         setupKeyboardObservers()
         updateNavigationButtons()
+        prepareForEntranceAnimation()
     }
     
     deinit {
@@ -172,6 +212,22 @@ final class FeedbackWallViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .clear
         
+        if isFullscreen {
+            setupFullscreenLayout()
+        } else {
+            setupPopupLayout()
+        }
+        
+        // Configure close button visibility
+        closeButton.isHidden = !showsCloseButton
+        
+        // Disable dim view tap gesture if close button is hidden
+        if !showsCloseButton {
+            dimView.gestureRecognizers?.forEach { dimView.removeGestureRecognizer($0) }
+        }
+    }
+    
+    private func setupPopupLayout() {
         // Add dim view
         view.addSubview(dimView)
         NSLayoutConstraint.activate([
@@ -181,9 +237,11 @@ final class FeedbackWallViewController: UIViewController {
             dimView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
-        // Add tap gesture to dim view for dismissal
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dimViewTapped))
-        dimView.addGestureRecognizer(tapGesture)
+        // Add tap gesture to dim view for dismissal (only if close button is shown)
+        if showsCloseButton {
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dimViewTapped))
+            dimView.addGestureRecognizer(tapGesture)
+        }
         
         // Add scroll view
         view.addSubview(scrollView)
@@ -207,54 +265,93 @@ final class FeedbackWallViewController: UIViewController {
             bottomConstraint
         ])
         
+        setupCardContent()
+    }
+    
+    private func setupFullscreenLayout() {
+        // No dim view for fullscreen
+        view.backgroundColor = ThemeColorResolver.backgroundColor(from: survey.theme)
+        
+        // Add scroll view directly
+        view.addSubview(scrollView)
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ])
+        
+        // Add card view (will fill the screen, no corner radius)
+        scrollView.addSubview(cardView)
+        cardView.layer.cornerRadius = 0
+        
+        NSLayoutConstraint.activate([
+            cardView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            cardView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
+        ])
+        
+        setupCardContent()
+    }
+    
+    private func setupCardContent() {
         // Add close button
         cardView.addSubview(closeButton)
         NSLayoutConstraint.activate([
-            closeButton.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 16),
-            closeButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -16),
-            closeButton.widthAnchor.constraint(equalToConstant: 32),
-            closeButton.heightAnchor.constraint(equalToConstant: 32)
+            closeButton.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 10),
+            closeButton.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -10),
+            closeButton.widthAnchor.constraint(equalToConstant: 28),
+            closeButton.heightAnchor.constraint(equalToConstant: 28)
+        ])
+        
+        // Add header label (Quick question)
+        cardView.addSubview(headerLabel)
+        NSLayoutConstraint.activate([
+            headerLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: contentPadding),
+            headerLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            headerLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
         // Add title label
         cardView.addSubview(titleLabel)
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
+            titleLabel.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 8),
+            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
         // Add description label
         cardView.addSubview(descriptionLabel)
         NSLayoutConstraint.activate([
             descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            descriptionLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            descriptionLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
+            descriptionLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            descriptionLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
         // Add progress label
         cardView.addSubview(progressLabel)
         NSLayoutConstraint.activate([
             progressLabel.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 16),
-            progressLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            progressLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
+            progressLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            progressLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
         // Add question container view
         cardView.addSubview(questionContainerView)
         NSLayoutConstraint.activate([
             questionContainerView.topAnchor.constraint(equalTo: progressLabel.bottomAnchor, constant: 16),
-            questionContainerView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            questionContainerView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24)
+            questionContainerView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            questionContainerView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
         // Add button stack view
         cardView.addSubview(buttonStackView)
         NSLayoutConstraint.activate([
             buttonStackView.topAnchor.constraint(equalTo: questionContainerView.bottomAnchor, constant: 24),
-            buttonStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 24),
-            buttonStackView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -24),
-            buttonStackView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -24),
+            buttonStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            buttonStackView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding),
+            buttonStackView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -contentPadding),
             buttonStackView.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
@@ -266,9 +363,8 @@ final class FeedbackWallViewController: UIViewController {
         
         // Create question views
         for question in survey.questions {
-            let questionView = SurveyQuestionView(question: question)
+            let questionView = SurveyQuestionView(question: question, theme: survey.theme)
             questionView.delegate = self
-            questionView.applyTheme(survey.theme)
             questionView.translatesAutoresizingMaskIntoConstraints = false
             questionViews.append(questionView)
         }
@@ -290,6 +386,85 @@ final class FeedbackWallViewController: UIViewController {
             name: UIResponder.keyboardWillHideNotification,
             object: nil
         )
+    }
+    
+    // MARK: - Entrance Animation
+    
+    private func prepareForEntranceAnimation() {
+        guard entranceAnimation != .none else { return }
+        
+        // Set initial state based on animation type
+        switch entranceAnimation {
+        case .slideFromBottom:
+            cardView.transform = CGAffineTransform(translationX: 0, y: view.bounds.height)
+        case .slideFromTop:
+            cardView.transform = CGAffineTransform(translationX: 0, y: -view.bounds.height)
+        case .slideFromLeft:
+            cardView.transform = CGAffineTransform(translationX: -view.bounds.width, y: 0)
+        case .slideFromRight:
+            cardView.transform = CGAffineTransform(translationX: view.bounds.width, y: 0)
+        case .fadeIn:
+            cardView.alpha = 0
+        case .scale:
+            cardView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+            cardView.alpha = 0
+        case .none:
+            break
+        }
+    }
+    
+    /// Performs the entrance animation. Called after the view controller is presented.
+    func performEntranceAnimation() {
+        guard entranceAnimation != .none else {
+            dimView.alpha = 1
+            return
+        }
+        
+        UIView.animate(
+            withDuration: animationSpeed.duration,
+            delay: 0,
+            usingSpringWithDamping: 0.85,
+            initialSpringVelocity: 0,
+            options: .curveEaseOut
+        ) { [weak self] in
+            self?.cardView.transform = .identity
+            self?.cardView.alpha = 1
+            self?.dimView.alpha = 1
+        }
+    }
+    
+    private func performExitAnimation(completion: @escaping () -> Void) {
+        guard entranceAnimation != .none else {
+            completion()
+            return
+        }
+        
+        UIView.animate(
+            withDuration: animationSpeed.duration * 0.7, // Slightly faster exit
+            delay: 0,
+            options: .curveEaseIn
+        ) { [weak self] in
+            guard let self = self else { return }
+            
+            switch self.entranceAnimation {
+            case .slideFromBottom:
+                self.cardView.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height)
+            case .slideFromTop:
+                self.cardView.transform = CGAffineTransform(translationX: 0, y: -self.view.bounds.height)
+            case .slideFromLeft:
+                self.cardView.transform = CGAffineTransform(translationX: -self.view.bounds.width, y: 0)
+            case .slideFromRight:
+                self.cardView.transform = CGAffineTransform(translationX: self.view.bounds.width, y: 0)
+            case .fadeIn, .scale:
+                self.cardView.alpha = 0
+            case .none:
+                break
+            }
+            
+            self.dimView.alpha = 0
+        } completion: { _ in
+            completion()
+        }
     }
     
     // MARK: - Question Navigation
@@ -371,6 +546,7 @@ final class FeedbackWallViewController: UIViewController {
     }
     
     @objc private func dimViewTapped() {
+        guard showsCloseButton else { return }
         view.endEditing(true)
         dismissSurvey()
     }
@@ -411,8 +587,10 @@ final class FeedbackWallViewController: UIViewController {
     }
     
     private func dismissSurvey() {
-        dismiss(animated: true) { [weak self] in
-            self?.onDismiss()
+        performExitAnimation { [weak self] in
+            self?.dismiss(animated: false) {
+                self?.onDismiss()
+            }
         }
     }
 }
@@ -433,4 +611,3 @@ private extension NSLayoutConstraint {
         return self
     }
 }
-

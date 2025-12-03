@@ -83,19 +83,22 @@ final class SurveyManager {
     ///   - trigger: The trigger that initiated the survey.
     ///   - answers: The user's answers.
     ///   - metadata: Device and app metadata.
+    ///   - surveyVersion: The survey version at time of response (optional).
     func submitResponses(
         surveyId: String,
         userId: String?,
         trigger: String,
         answers: [SurveyAnswer],
-        metadata: SurveyResponseMetadata
+        metadata: SurveyResponseMetadata,
+        surveyVersion: Int? = nil
     ) async {
         let submission = SurveyResponseSubmission(
             surveyId: surveyId,
             userId: userId,
             trigger: trigger,
             answers: answers,
-            metadata: metadata
+            metadata: metadata,
+            surveyVersion: surveyVersion
         )
         
         do {
@@ -136,7 +139,8 @@ final class SurveyManager {
             userId: UserSession.shared.userId,
             trigger: trigger,
             answers: answers,
-            metadata: metadata
+            metadata: metadata,
+            surveyVersion: survey.version
         )
     }
     

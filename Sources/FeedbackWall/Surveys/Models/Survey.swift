@@ -16,6 +16,10 @@ public struct Survey: Decodable {
     
     /// Optional theme customization for the survey UI.
     public let theme: SurveyTheme?
+    
+    /// Version number - increments when survey is edited after receiving responses.
+    /// Optional since older surveys may not have a version number yet.
+    public let version: Int?
 }
 
 /// Represents a single question within a survey.

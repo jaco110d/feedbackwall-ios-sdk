@@ -16,6 +16,10 @@ struct SurveyResponseSubmission: Encodable {
     
     /// Metadata about the device and app.
     let metadata: SurveyResponseMetadata
+    
+    /// Survey version at time of response - used for versioning support.
+    /// Optional since older surveys may not have a version number yet.
+    let surveyVersion: Int?
 }
 
 /// A single answer to a survey question.

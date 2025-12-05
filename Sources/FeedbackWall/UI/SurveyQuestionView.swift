@@ -349,8 +349,8 @@ final class OptionRowView: UIControl {
     private lazy var containerView: UIView = {
         let view = UIView()
         view.backgroundColor = unselectedBackground
-        view.layer.cornerRadius = cornerRadius
-        view.layer.borderWidth = 0  // No border on unselected (per spec)
+        view.layer.cornerRadius = 24  // Fully rounded ends (half of 48pt height)
+        view.layer.borderWidth = 0
         view.isUserInteractionEnabled = false
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -422,15 +422,16 @@ final class OptionRowView: UIControl {
         radioIndicator.addSubview(radioInnerRing)
         containerView.addSubview(titleLabel)
         
-        // Layout for clean, modern appearance
+        // Layout for clean, modern appearance - match button height (48pt)
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: topAnchor),
             containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            containerView.heightAnchor.constraint(equalToConstant: 48),
             
-            // Radio button: 14pt from left edge, 16x16 size
-            radioIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 14),
+            // Radio button: 16pt from left edge, 16x16 size
+            radioIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
             radioIndicator.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
             radioIndicator.widthAnchor.constraint(equalToConstant: 16),
             radioIndicator.heightAnchor.constraint(equalToConstant: 16),
@@ -441,11 +442,10 @@ final class OptionRowView: UIControl {
             radioInnerRing.widthAnchor.constraint(equalToConstant: 10),
             radioInnerRing.heightAnchor.constraint(equalToConstant: 10),
             
-            // Title with comfortable padding
+            // Title centered vertically with horizontal padding
             titleLabel.leadingAnchor.constraint(equalTo: radioIndicator.trailingAnchor, constant: 12),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -14),
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            titleLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12)
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            titleLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
         ])
     }
     

@@ -89,26 +89,6 @@ final class FeedbackWallViewController: UIViewController {
         return label
     }()
     
-    private lazy var titleLabel: UILabel = {
-        let label = UILabel()
-        label.font = ThemeFontFactory.titleFont(from: survey.theme)
-        label.textColor = ThemeColorResolver.textColor(from: survey.theme)
-        label.numberOfLines = 0
-        label.textAlignment = textAlignment
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
-    private lazy var descriptionLabel: UILabel = {
-        let label = UILabel()
-        label.font = ThemeFontFactory.bodyFont(from: survey.theme)
-        label.textColor = ThemeColorResolver.textColor(from: survey.theme).withAlphaComponent(0.7)
-        label.numberOfLines = 0
-        label.textAlignment = textAlignment
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
     private lazy var questionContainerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -313,26 +293,10 @@ final class FeedbackWallViewController: UIViewController {
             headerLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
-        // Add title label
-        cardView.addSubview(titleLabel)
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 8),
-            titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
-            titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
-        ])
-        
-        // Add description label
-        cardView.addSubview(descriptionLabel)
-        NSLayoutConstraint.activate([
-            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            descriptionLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
-            descriptionLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
-        ])
-        
-        // Add progress label
+        // Add progress label (directly after header)
         cardView.addSubview(progressLabel)
         NSLayoutConstraint.activate([
-            progressLabel.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 16),
+            progressLabel.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 16),
             progressLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             progressLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
@@ -357,10 +321,6 @@ final class FeedbackWallViewController: UIViewController {
     }
     
     private func setupContent() {
-        titleLabel.text = survey.title
-        descriptionLabel.text = survey.description
-        descriptionLabel.isHidden = survey.description == nil
-        
         // Create question views
         for question in survey.questions {
             let questionView = SurveyQuestionView(question: question, theme: survey.theme)

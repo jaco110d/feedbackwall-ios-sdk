@@ -200,11 +200,11 @@ enum ThemeFontFactory {
     }
     
     /// Creates a header label font ("Quick question").
-    /// Uses 13pt with semibold weight.
+    /// Uses 16pt with semibold weight for better visibility.
     /// - Parameter theme: The survey theme (optional).
     /// - Returns: A configured UIFont.
     static func headerLabelFont(from theme: SurveyTheme?) -> UIFont {
-        return makeFont(family: theme?.fontFamily, size: 13, weight: .semibold)
+        return makeFont(family: theme?.fontFamily, size: 16, weight: .semibold)
     }
     
     // MARK: - Private Helpers

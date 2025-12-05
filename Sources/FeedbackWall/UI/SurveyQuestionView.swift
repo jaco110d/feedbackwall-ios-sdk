@@ -42,7 +42,7 @@ final class SurveyQuestionView: UIView {
     private lazy var optionsStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 8  // Per spec: 8pt gap between options
+        stack.spacing = 10  // Clean spacing between options
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -422,33 +422,30 @@ final class OptionRowView: UIControl {
         radioIndicator.addSubview(radioInnerRing)
         containerView.addSubview(titleLabel)
         
-        // Per spec:
-        // - Padding: 10pt vertical, 12pt horizontal
-        // - Radio size: 16x16
-        // - Gap between radio and text: 10pt
+        // Layout for clean, modern appearance
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: topAnchor),
             containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // Radio button: 12pt from left edge, 16x16 size
-            radioIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
+            // Radio button: 14pt from left edge, 16x16 size
+            radioIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 14),
             radioIndicator.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
             radioIndicator.widthAnchor.constraint(equalToConstant: 16),
             radioIndicator.heightAnchor.constraint(equalToConstant: 16),
             
-            // Inner ring: 3pt inset (creates 10x10 white ring inside 16x16)
+            // Inner ring: centered with 10x10 size
             radioInnerRing.centerXAnchor.constraint(equalTo: radioIndicator.centerXAnchor),
             radioInnerRing.centerYAnchor.constraint(equalTo: radioIndicator.centerYAnchor),
             radioInnerRing.widthAnchor.constraint(equalToConstant: 10),
             radioInnerRing.heightAnchor.constraint(equalToConstant: 10),
             
-            // Title: 10pt gap from radio, 12pt from right edge, 10pt vertical padding
-            titleLabel.leadingAnchor.constraint(equalTo: radioIndicator.trailingAnchor, constant: 10),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
-            titleLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10)
+            // Title with comfortable padding
+            titleLabel.leadingAnchor.constraint(equalTo: radioIndicator.trailingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -14),
+            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
+            titleLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12)
         ])
     }
     

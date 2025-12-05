@@ -63,15 +63,11 @@ final class FeedbackWallViewController: UIViewController {
         view.layer.cornerRadius = ThemeCornerRadiusResolver.cardCornerRadius(from: survey.theme)
         view.translatesAutoresizingMaskIntoConstraints = false
         
-        // Shadow for depth (matches web preview)
+        // Refined shadow for modern depth effect
         view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOffset = CGSize(width: 0, height: 4)
-        view.layer.shadowRadius = 16
-        view.layer.shadowOpacity = 0.12
-        
-        // Subtle border
-        view.layer.borderWidth = 1
-        view.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: 8)
+        view.layer.shadowRadius = 24
+        view.layer.shadowOpacity = 0.15
         
         return view
     }()
@@ -91,28 +87,26 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var headerStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
-        stack.spacing = 8
+        stack.spacing = 6
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
     
-    private lazy var headerIconView: UIImageView = {
-        let imageView = UIImageView()
-        let config = UIImage.SymbolConfiguration(pointSize: 18)
-        imageView.image = UIImage(systemName: "bubble.left.fill", withConfiguration: config)
-        imageView.tintColor = ThemeColorResolver.primaryColor(from: survey.theme)
-        imageView.contentMode = .scaleAspectFit
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.setContentHuggingPriority(.required, for: .horizontal)
-        return imageView
+    private lazy var headerIconLabel: UILabel = {
+        let label = UILabel()
+        label.text = "💬"
+        label.font = .systemFont(ofSize: 20)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.setContentHuggingPriority(.required, for: .horizontal)
+        return label
     }()
     
     private lazy var headerLabel: UILabel = {
         let label = UILabel()
         label.text = "Quick question"
         label.font = ThemeFontFactory.headerLabelFont(from: survey.theme)
-        label.textColor = ThemeColorResolver.labelColor(from: survey.theme)
+        label.textColor = ThemeColorResolver.primaryColor(from: survey.theme)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -313,20 +307,23 @@ final class FeedbackWallViewController: UIViewController {
             closeButton.heightAnchor.constraint(equalToConstant: 28)
         ])
         
-        // Add header stack (icon + "Quick question" label)
-        headerStackView.addArrangedSubview(headerIconView)
+        // Add header stack (emoji + "Quick question" label)
+        headerStackView.addArrangedSubview(headerIconLabel)
         headerStackView.addArrangedSubview(headerLabel)
         cardView.addSubview(headerStackView)
+        
+        // Add extra top padding for better visual balance
+        let headerTopPadding = contentPadding + 8
         NSLayoutConstraint.activate([
-            headerStackView.topAnchor.constraint(equalTo: cardView.topAnchor, constant: contentPadding),
+            headerStackView.topAnchor.constraint(equalTo: cardView.topAnchor, constant: headerTopPadding),
             headerStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             headerStackView.trailingAnchor.constraint(lessThanOrEqualTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
-        // Add progress label (12pt after header per spec)
+        // Add progress label with spacing after header
         cardView.addSubview(progressLabel)
         NSLayoutConstraint.activate([
-            progressLabel.topAnchor.constraint(equalTo: headerStackView.bottomAnchor, constant: 12),
+            progressLabel.topAnchor.constraint(equalTo: headerStackView.bottomAnchor, constant: 16),
             progressLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             progressLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
@@ -334,19 +331,20 @@ final class FeedbackWallViewController: UIViewController {
         // Add question container view
         cardView.addSubview(questionContainerView)
         NSLayoutConstraint.activate([
-            questionContainerView.topAnchor.constraint(equalTo: progressLabel.bottomAnchor, constant: 16),
+            questionContainerView.topAnchor.constraint(equalTo: progressLabel.bottomAnchor, constant: 8),
             questionContainerView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             questionContainerView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
-        // Add button stack view
+        // Add button stack view with refined spacing
         cardView.addSubview(buttonStackView)
+        let bottomPadding = contentPadding + 4
         NSLayoutConstraint.activate([
-            buttonStackView.topAnchor.constraint(equalTo: questionContainerView.bottomAnchor, constant: 24),
+            buttonStackView.topAnchor.constraint(equalTo: questionContainerView.bottomAnchor, constant: 28),
             buttonStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             buttonStackView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding),
-            buttonStackView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -contentPadding),
-            buttonStackView.heightAnchor.constraint(equalToConstant: 44)  // 12pt padding * 2 + ~20pt text
+            buttonStackView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -bottomPadding),
+            buttonStackView.heightAnchor.constraint(equalToConstant: 48)
         ])
     }
     

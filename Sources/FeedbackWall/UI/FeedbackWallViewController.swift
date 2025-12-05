@@ -138,7 +138,7 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var backButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Back", for: .normal)
-        button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme, weight: .medium)
+        button.titleLabel?.font = ThemeFontFactory.baseFont(from: survey.theme, weight: .medium)
         button.backgroundColor = ThemeColorResolver.optionUnselectedBackground(from: survey.theme)
         button.setTitleColor(ThemeColorResolver.textColor(from: survey.theme), for: .normal)
         button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
@@ -150,7 +150,7 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var nextButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Next", for: .normal)
-        button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme)
+        button.titleLabel?.font = ThemeFontFactory.baseFont(from: survey.theme, weight: .semibold)
         button.backgroundColor = primaryColor
         button.setTitleColor(buttonTextColor, for: .normal)
         button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
@@ -162,7 +162,7 @@ final class FeedbackWallViewController: UIViewController {
     private lazy var submitButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Submit", for: .normal)
-        button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme)
+        button.titleLabel?.font = ThemeFontFactory.baseFont(from: survey.theme, weight: .semibold)
         button.backgroundColor = primaryColor
         button.setTitleColor(buttonTextColor, for: .normal)
         button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)

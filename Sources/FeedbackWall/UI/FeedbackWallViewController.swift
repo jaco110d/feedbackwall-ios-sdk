@@ -141,7 +141,7 @@ final class FeedbackWallViewController: UIViewController {
         button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme, weight: .medium)
         button.backgroundColor = ThemeColorResolver.optionUnselectedBackground(from: survey.theme)
         button.setTitleColor(ThemeColorResolver.textColor(from: survey.theme), for: .normal)
-        button.layer.cornerRadius = 24  // Fully rounded ends
+        button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -153,7 +153,7 @@ final class FeedbackWallViewController: UIViewController {
         button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme)
         button.backgroundColor = primaryColor
         button.setTitleColor(buttonTextColor, for: .normal)
-        button.layer.cornerRadius = 24  // Fully rounded ends
+        button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -165,7 +165,7 @@ final class FeedbackWallViewController: UIViewController {
         button.titleLabel?.font = ThemeFontFactory.buttonFont(from: survey.theme)
         button.backgroundColor = primaryColor
         button.setTitleColor(buttonTextColor, for: .normal)
-        button.layer.cornerRadius = 24  // Fully rounded ends
+        button.layer.cornerRadius = ThemeCornerRadiusResolver.buttonCornerRadius(from: survey.theme)
         button.addTarget(self, action: #selector(submitTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button

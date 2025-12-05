@@ -349,7 +349,7 @@ final class OptionRowView: UIControl {
     private lazy var containerView: UIView = {
         let view = UIView()
         view.backgroundColor = unselectedBackground
-        view.layer.cornerRadius = 24  // Fully rounded ends (half of 48pt height)
+        view.layer.cornerRadius = cornerRadius
         view.layer.borderWidth = 0
         view.isUserInteractionEnabled = false
         view.translatesAutoresizingMaskIntoConstraints = false

@@ -61,30 +61,58 @@ final class FeedbackWallViewController: UIViewController {
         let view = UIView()
         view.backgroundColor = ThemeColorResolver.backgroundColor(from: survey.theme)
         view.layer.cornerRadius = ThemeCornerRadiusResolver.cardCornerRadius(from: survey.theme)
-        view.layer.masksToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Shadow for depth (matches web preview)
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: 4)
+        view.layer.shadowRadius = 16
+        view.layer.shadowOpacity = 0.12
+        
+        // Subtle border
+        view.layer.borderWidth = 1
+        view.layer.borderColor = UIColor.black.withAlphaComponent(0.05).cgColor
+        
         return view
     }()
     
     private lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("×", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 24, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+        button.setImage(UIImage(systemName: "xmark", withConfiguration: config), for: .normal)
         button.tintColor = ThemeColorResolver.closeButtonColor(from: survey.theme)
         button.backgroundColor = .clear
         button.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
-        // Add hover/tap background effect
         button.layer.cornerRadius = 14
         return button
     }()
     
+    private lazy var headerStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
+    private lazy var headerIconView: UIImageView = {
+        let imageView = UIImageView()
+        let config = UIImage.SymbolConfiguration(pointSize: 18)
+        imageView.image = UIImage(systemName: "bubble.left.fill", withConfiguration: config)
+        imageView.tintColor = ThemeColorResolver.primaryColor(from: survey.theme)
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.setContentHuggingPriority(.required, for: .horizontal)
+        return imageView
+    }()
+    
     private lazy var headerLabel: UILabel = {
         let label = UILabel()
-        label.text = "💬 Quick question"
-        label.font = ThemeFontFactory.bodyFont(from: survey.theme)
+        label.text = "Quick question"
+        label.font = ThemeFontFactory.headerLabelFont(from: survey.theme)
         label.textColor = ThemeColorResolver.labelColor(from: survey.theme)
-        label.textAlignment = textAlignment
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -285,18 +313,20 @@ final class FeedbackWallViewController: UIViewController {
             closeButton.heightAnchor.constraint(equalToConstant: 28)
         ])
         
-        // Add header label (Quick question)
-        cardView.addSubview(headerLabel)
+        // Add header stack (icon + "Quick question" label)
+        headerStackView.addArrangedSubview(headerIconView)
+        headerStackView.addArrangedSubview(headerLabel)
+        cardView.addSubview(headerStackView)
         NSLayoutConstraint.activate([
-            headerLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: contentPadding),
-            headerLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
-            headerLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
+            headerStackView.topAnchor.constraint(equalTo: cardView.topAnchor, constant: contentPadding),
+            headerStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
+            headerStackView.trailingAnchor.constraint(lessThanOrEqualTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
         
-        // Add progress label (directly after header)
+        // Add progress label (12pt after header per spec)
         cardView.addSubview(progressLabel)
         NSLayoutConstraint.activate([
-            progressLabel.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 16),
+            progressLabel.topAnchor.constraint(equalTo: headerStackView.bottomAnchor, constant: 12),
             progressLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             progressLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding)
         ])
@@ -316,7 +346,7 @@ final class FeedbackWallViewController: UIViewController {
             buttonStackView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: contentPadding),
             buttonStackView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -contentPadding),
             buttonStackView.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -contentPadding),
-            buttonStackView.heightAnchor.constraint(equalToConstant: 50)
+            buttonStackView.heightAnchor.constraint(equalToConstant: 44)  // 12pt padding * 2 + ~20pt text
         ])
     }
     

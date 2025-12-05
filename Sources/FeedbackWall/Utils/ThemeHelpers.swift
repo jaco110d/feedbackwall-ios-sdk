@@ -190,12 +190,21 @@ enum ThemeFontFactory {
     }
     
     /// Creates a question text font based on the theme configuration.
-    /// Uses title size with semibold weight.
+    /// Uses baseFontSize * 1.15 with regular weight (matches web preview).
     /// - Parameter theme: The survey theme (optional).
     /// - Returns: A configured UIFont.
     static func questionFont(from theme: SurveyTheme?) -> UIFont {
-        let size = validatedSize(theme?.titleFontSize, default: SurveyThemeDefaults.titleFontSize)
-        return makeFont(family: theme?.fontFamily, size: size, weight: .semibold)
+        let baseSize = validatedSize(theme?.fontSize, default: SurveyThemeDefaults.fontSize)
+        let size = baseSize * 1.15  // Question text is 1.15x base size
+        return makeFont(family: theme?.fontFamily, size: size, weight: .regular)
+    }
+    
+    /// Creates a header label font ("Quick question").
+    /// Uses 13pt with semibold weight.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: A configured UIFont.
+    static func headerLabelFont(from theme: SurveyTheme?) -> UIFont {
+        return makeFont(family: theme?.fontFamily, size: 13, weight: .semibold)
     }
     
     // MARK: - Private Helpers
@@ -342,24 +351,28 @@ enum ThemeColorResolver {
     }
     
     /// Resolves the selected option background color from theme.
+    /// Returns primaryColor with 20% opacity (NOT solid color).
     /// - Parameter theme: The survey theme (optional).
     /// - Returns: The resolved selected option background UIColor.
     static func optionSelectedBackground(from theme: SurveyTheme?) -> UIColor {
-        if let hex = theme?.optionSelectedBackgroundHex, let color = UIColor(hex: hex) {
-            return color
-        }
-        // Default to primary color
-        return primaryColor(from: theme)
+        // Per web spec: selected background is primaryColor @ 20% opacity
+        return primaryColor(from: theme).withAlphaComponent(0.2)
     }
     
     /// Resolves the selected option text color from theme.
+    /// Returns textColor (NOT white) - text stays the same when selected.
     /// - Parameter theme: The survey theme (optional).
     /// - Returns: The resolved selected option text UIColor.
     static func optionSelectedText(from theme: SurveyTheme?) -> UIColor {
-        if let hex = theme?.optionSelectedTextHex, let color = UIColor(hex: hex) {
-            return color
-        }
-        return UIColor(hex: SurveyThemeDefaults.optionSelectedTextHex)!
+        // Per web spec: text color stays the same when selected (NOT white)
+        return textColor(from: theme)
+    }
+    
+    /// Returns the selected radio button border/fill color.
+    /// - Parameter theme: The survey theme (optional).
+    /// - Returns: The primary UIColor for selected radio buttons.
+    static func radioSelectedColor(from theme: SurveyTheme?) -> UIColor {
+        return primaryColor(from: theme)
     }
     
     /// Returns the unselected option background color.

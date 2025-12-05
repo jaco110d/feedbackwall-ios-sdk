@@ -42,7 +42,7 @@ final class SurveyQuestionView: UIView {
     private lazy var optionsStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 8  // Per spec: 8pt gap between options
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -65,8 +65,10 @@ final class SurveyQuestionView: UIView {
     private lazy var poorLabel: UILabel = {
         let label = UILabel()
         label.text = "Poor"
-        label.font = ThemeFontFactory.bodyFont(from: theme).withSize(12)
-        label.textColor = ThemeColorResolver.labelColor(from: theme)
+        // Per spec: baseFontSize * 0.85
+        let fontSize = CGFloat(theme?.fontSize ?? 14) * 0.85
+        label.font = ThemeFontFactory.bodyFont(from: theme).withSize(fontSize)
+        label.textColor = textColor.withAlphaComponent(0.80)  // Per spec: 80% opacity
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -74,8 +76,10 @@ final class SurveyQuestionView: UIView {
     private lazy var excellentLabel: UILabel = {
         let label = UILabel()
         label.text = "Excellent"
-        label.font = ThemeFontFactory.bodyFont(from: theme).withSize(12)
-        label.textColor = ThemeColorResolver.labelColor(from: theme)
+        // Per spec: baseFontSize * 0.85
+        let fontSize = CGFloat(theme?.fontSize ?? 14) * 0.85
+        label.font = ThemeFontFactory.bodyFont(from: theme).withSize(fontSize)
+        label.textColor = textColor.withAlphaComponent(0.80)  // Per spec: 80% opacity
         label.textAlignment = .right
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -85,8 +89,8 @@ final class SurveyQuestionView: UIView {
         let tv = UITextView()
         tv.font = ThemeFontFactory.bodyFont(from: theme)
         tv.textColor = textColor
-        tv.backgroundColor = optionUnselectedBackground
-        tv.layer.borderColor = optionUnselectedBorder.cgColor
+        tv.backgroundColor = textColor.withAlphaComponent(0.08)  // Per spec: 8% opacity
+        tv.layer.borderColor = textColor.withAlphaComponent(0.20).cgColor  // Per spec: 20% opacity
         tv.layer.borderWidth = 1
         tv.layer.cornerRadius = buttonCornerRadius
         tv.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
@@ -99,7 +103,7 @@ final class SurveyQuestionView: UIView {
     private lazy var placeholderLabel: UILabel = {
         let label = UILabel()
         label.font = ThemeFontFactory.bodyFont(from: theme)
-        label.textColor = ThemeColorResolver.labelColor(from: theme)
+        label.textColor = textColor.withAlphaComponent(0.50)  // Per spec: 50% opacity
         label.translatesAutoresizingMaskIntoConstraints = false
         label.isHidden = true
         return label
@@ -317,7 +321,7 @@ extension SurveyQuestionView: UITextViewDelegate {
     }
     
     func textViewDidEndEditing(_ textView: UITextView) {
-        textView.layer.borderColor = optionUnselectedBorder.cgColor
+        textView.layer.borderColor = textColor.withAlphaComponent(0.20).cgColor  // Per spec: 20% opacity
         textView.layer.borderWidth = 1
     }
 }
@@ -325,6 +329,7 @@ extension SurveyQuestionView: UITextViewDelegate {
 // MARK: - OptionRowView
 
 /// A tappable option row with radio-style selection indicator.
+/// Matches the FeedbackWall web preview pixel-perfectly.
 final class OptionRowView: UIControl {
     
     // MARK: - Properties
@@ -333,8 +338,8 @@ final class OptionRowView: UIControl {
     private var isSelectedState: Bool = false
     
     // Theme colors
+    private var primaryColor: UIColor
     private var selectedBackground: UIColor
-    private var selectedTextColor: UIColor
     private var unselectedBackground: UIColor
     private var unselectedBorder: UIColor
     private var textColor: UIColor
@@ -345,16 +350,16 @@ final class OptionRowView: UIControl {
         let view = UIView()
         view.backgroundColor = unselectedBackground
         view.layer.cornerRadius = cornerRadius
-        view.layer.borderWidth = 1
-        view.layer.borderColor = unselectedBorder.cgColor
+        view.layer.borderWidth = 0  // No border on unselected (per spec)
         view.isUserInteractionEnabled = false
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
+    /// Radio button outer circle (16x16 per spec)
     private lazy var radioIndicator: UIView = {
         let outer = UIView()
-        outer.layer.cornerRadius = 10
+        outer.layer.cornerRadius = 8  // 16/2 = 8
         outer.layer.borderWidth = 2
         outer.layer.borderColor = unselectedBorder.cgColor
         outer.backgroundColor = .clear
@@ -363,14 +368,15 @@ final class OptionRowView: UIControl {
         return outer
     }()
     
-    private lazy var radioInnerDot: UIView = {
-        let dot = UIView()
-        dot.layer.cornerRadius = 5
-        dot.backgroundColor = selectedTextColor
-        dot.isHidden = true
-        dot.isUserInteractionEnabled = false
-        dot.translatesAutoresizingMaskIntoConstraints = false
-        return dot
+    /// White inner ring that creates the "dot" effect when selected
+    private lazy var radioInnerRing: UIView = {
+        let ring = UIView()
+        ring.layer.cornerRadius = 5  // 10/2 = 5 (3pt inset from 16x16)
+        ring.backgroundColor = .white
+        ring.isHidden = true
+        ring.isUserInteractionEnabled = false
+        ring.translatesAutoresizingMaskIntoConstraints = false
+        return ring
     }()
     
     private lazy var titleLabel: UILabel = {
@@ -392,8 +398,8 @@ final class OptionRowView: UIControl {
         self.cornerRadius = cornerRadius
         
         // Resolve colors
+        self.primaryColor = ThemeColorResolver.primaryColor(from: theme)
         self.selectedBackground = ThemeColorResolver.optionSelectedBackground(from: theme)
-        self.selectedTextColor = ThemeColorResolver.optionSelectedText(from: theme)
         self.unselectedBackground = ThemeColorResolver.optionUnselectedBackground(from: theme)
         self.unselectedBorder = ThemeColorResolver.optionUnselectedBorder(from: theme)
         self.textColor = ThemeColorResolver.textColor(from: theme)
@@ -413,29 +419,36 @@ final class OptionRowView: UIControl {
     private func setupUI() {
         addSubview(containerView)
         containerView.addSubview(radioIndicator)
-        radioIndicator.addSubview(radioInnerDot)
+        radioIndicator.addSubview(radioInnerRing)
         containerView.addSubview(titleLabel)
         
+        // Per spec:
+        // - Padding: 10pt vertical, 12pt horizontal
+        // - Radio size: 16x16
+        // - Gap between radio and text: 10pt
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: topAnchor),
             containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            radioIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            // Radio button: 12pt from left edge, 16x16 size
+            radioIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
             radioIndicator.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            radioIndicator.widthAnchor.constraint(equalToConstant: 20),
-            radioIndicator.heightAnchor.constraint(equalToConstant: 20),
+            radioIndicator.widthAnchor.constraint(equalToConstant: 16),
+            radioIndicator.heightAnchor.constraint(equalToConstant: 16),
             
-            radioInnerDot.centerXAnchor.constraint(equalTo: radioIndicator.centerXAnchor),
-            radioInnerDot.centerYAnchor.constraint(equalTo: radioIndicator.centerYAnchor),
-            radioInnerDot.widthAnchor.constraint(equalToConstant: 10),
-            radioInnerDot.heightAnchor.constraint(equalToConstant: 10),
+            // Inner ring: 3pt inset (creates 10x10 white ring inside 16x16)
+            radioInnerRing.centerXAnchor.constraint(equalTo: radioIndicator.centerXAnchor),
+            radioInnerRing.centerYAnchor.constraint(equalTo: radioIndicator.centerYAnchor),
+            radioInnerRing.widthAnchor.constraint(equalToConstant: 10),
+            radioInnerRing.heightAnchor.constraint(equalToConstant: 10),
             
-            titleLabel.leadingAnchor.constraint(equalTo: radioIndicator.trailingAnchor, constant: 12),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 14),
-            titleLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -14)
+            // Title: 10pt gap from radio, 12pt from right edge, 10pt vertical padding
+            titleLabel.leadingAnchor.constraint(equalTo: radioIndicator.trailingAnchor, constant: 10),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
+            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
+            titleLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10)
         ])
     }
     
@@ -448,17 +461,25 @@ final class OptionRowView: UIControl {
             guard let self = self else { return }
             
             if selected {
+                // SELECTED STATE:
+                // - Background: primaryColor @ 20% opacity
+                // - Text: stays textColor (NOT white)
+                // - Radio: primaryColor fill with white inner ring
                 self.containerView.backgroundColor = self.selectedBackground
-                self.containerView.layer.borderColor = UIColor.clear.cgColor
-                self.titleLabel.textColor = self.selectedTextColor
-                self.radioIndicator.layer.borderColor = self.selectedTextColor.cgColor
-                self.radioInnerDot.isHidden = false
+                self.titleLabel.textColor = self.textColor  // Text stays same color
+                self.radioIndicator.layer.borderColor = self.primaryColor.cgColor
+                self.radioIndicator.backgroundColor = self.primaryColor
+                self.radioInnerRing.isHidden = false
             } else {
+                // UNSELECTED STATE:
+                // - Background: textColor @ 8% opacity
+                // - Text: textColor
+                // - Radio: transparent with border
                 self.containerView.backgroundColor = self.unselectedBackground
-                self.containerView.layer.borderColor = self.unselectedBorder.cgColor
                 self.titleLabel.textColor = self.textColor
                 self.radioIndicator.layer.borderColor = self.unselectedBorder.cgColor
-                self.radioInnerDot.isHidden = true
+                self.radioIndicator.backgroundColor = .clear
+                self.radioInnerRing.isHidden = true
             }
         }
     }

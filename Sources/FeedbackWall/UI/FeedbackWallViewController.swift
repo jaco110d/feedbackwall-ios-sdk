@@ -272,29 +272,32 @@ final class FeedbackWallViewController: UIViewController {
     }
     
     private func setupFullscreenLayout() {
-        // Simple fullscreen layout - like a normal app screen
+        // Fullscreen layout with vertically centered content
         view.backgroundColor = ThemeColorResolver.backgroundColor(from: survey.theme)
         
         // Card view styling (no shadow, no corner radius)
         cardView.layer.cornerRadius = 0
         cardView.layer.shadowOpacity = 0
         
-        // Add scroll view for keyboard handling, pinned to safe area top
+        // Add scroll view for keyboard handling
         view.addSubview(scrollView)
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
         
-        // Add card view inside scroll view - content sizes naturally from top
+        // Add card view inside scroll view - centered vertically
         scrollView.addSubview(cardView)
         NSLayoutConstraint.activate([
-            cardView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            // Vertical centering with flexibility
+            cardView.topAnchor.constraint(greaterThanOrEqualTo: scrollView.topAnchor),
+            cardView.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor).withPriority(.defaultLow),
+            cardView.bottomAnchor.constraint(lessThanOrEqualTo: scrollView.bottomAnchor),
+            // Horizontal: full width
             cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            cardView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
+            cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
         
         setupCardContent()

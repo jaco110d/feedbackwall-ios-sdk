@@ -144,6 +144,30 @@ final class SurveyManager {
         )
     }
     
+    /// Records that a survey was shown to the user (impression).
+    /// This is called when the survey is presented, regardless of whether the user responds.
+    /// - Parameters:
+    ///   - survey: The survey being shown.
+    ///   - trigger: The trigger that initiated the survey.
+    func recordImpression(for survey: Survey, trigger: String) async {
+        let request = SurveyImpressionRequest(
+            surveyId: survey.id,
+            userId: UserSession.shared.userId,
+            trigger: trigger
+        )
+        
+        do {
+            let _: SurveyImpressionResponse = try await NetworkClient.shared.post(
+                "/api/sdk/impressions",
+                body: request
+            )
+            Logger.info("Survey impression recorded for survey: \(survey.id)")
+        } catch {
+            // Fail silently - impression is best-effort
+            Logger.warning("Failed to record survey impression: \(error.localizedDescription)")
+        }
+    }
+    
     // MARK: - Private Methods
     
     @MainActor
@@ -176,6 +200,11 @@ final class SurveyManager {
         }
         
         isShowingSurvey = true
+        
+        // Record impression immediately when survey is shown (fire-and-forget)
+        Task {
+            await recordImpression(for: survey, trigger: trigger)
+        }
         
         let surveyVC = FeedbackWallViewController(
             survey: survey,

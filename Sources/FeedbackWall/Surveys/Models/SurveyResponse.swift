@@ -49,3 +49,23 @@ struct SurveySubmissionResponse: Decodable {
     let status: String
 }
 
+// MARK: - Survey Impression
+
+/// Model for recording a survey impression (when survey is shown to user).
+struct SurveyImpressionRequest: Encodable {
+    /// The ID of the survey being shown.
+    let surveyId: String
+    
+    /// The user ID (either identified user or anonymous device ID).
+    let userId: String
+    
+    /// The trigger that initiated this survey.
+    let trigger: String
+}
+
+/// Response from the survey impression endpoint.
+struct SurveyImpressionResponse: Decodable {
+    /// Status of the impression recording (e.g., "ok").
+    let status: String
+}
+

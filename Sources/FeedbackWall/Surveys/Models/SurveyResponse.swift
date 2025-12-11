@@ -59,8 +59,8 @@ struct SurveyImpressionRequest: Encodable {
     /// The user ID (either identified user or anonymous device ID).
     let userId: String
     
-    /// The trigger that initiated this survey.
-    let trigger: String
+    /// The action type - always "shown" when recording an impression.
+    let action: String
 }
 
 /// Response from the survey impression endpoint.

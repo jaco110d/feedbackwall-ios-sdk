@@ -146,14 +146,12 @@ final class SurveyManager {
     
     /// Records that a survey was shown to the user (impression).
     /// This is called when the survey is presented, regardless of whether the user responds.
-    /// - Parameters:
-    ///   - survey: The survey being shown.
-    ///   - trigger: The trigger that initiated the survey.
-    func recordImpression(for survey: Survey, trigger: String) async {
+    /// - Parameter survey: The survey being shown.
+    func recordImpression(for survey: Survey) async {
         let request = SurveyImpressionRequest(
             surveyId: survey.id,
             userId: UserSession.shared.userId,
-            trigger: trigger
+            action: "shown"
         )
         
         do {
@@ -203,7 +201,7 @@ final class SurveyManager {
         
         // Record impression immediately when survey is shown (fire-and-forget)
         Task {
-            await recordImpression(for: survey, trigger: trigger)
+            await recordImpression(for: survey)
         }
         
         let surveyVC = FeedbackWallViewController(

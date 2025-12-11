@@ -44,11 +44,16 @@ final class NetworkClient {
     // MARK: - Initialization
     
     private init() {
-        let configuration = URLSessionConfiguration.default
+        let configuration = URLSessionConfiguration.ephemeral
         // Short timeouts as per PRD: max 2 seconds per request
         configuration.timeoutIntervalForRequest = 2.0
         configuration.timeoutIntervalForResource = 4.0
         configuration.waitsForConnectivity = false
+        
+        // Disable HTTP/3 (QUIC) to avoid connection issues in iOS simulator
+        if #available(iOS 14.5, *) {
+            configuration.assumesHTTP3Capable = false
+        }
         
         self.session = URLSession(configuration: configuration)
     }

@@ -272,27 +272,33 @@ final class FeedbackWallViewController: UIViewController {
     }
     
     private func setupFullscreenLayout() {
-        // No dim view for fullscreen
+        // No dim view for fullscreen - fill entire screen
         view.backgroundColor = ThemeColorResolver.backgroundColor(from: survey.theme)
         
-        // Add scroll view directly
+        // Add scroll view that fills the entire screen (ignoring safe area)
         view.addSubview(scrollView)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
-        // Add card view (will fill the screen, no corner radius)
+        // Configure scroll view to respect safe area for content
+        scrollView.contentInsetAdjustmentBehavior = .always
+        
+        // Add card view (will fill the screen, no corner radius, no shadow)
         scrollView.addSubview(cardView)
         cardView.layer.cornerRadius = 0
+        cardView.layer.shadowOpacity = 0
         
         NSLayoutConstraint.activate([
             cardView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            cardView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
+            cardView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            // Ensure card fills at least the full screen height
+            cardView.heightAnchor.constraint(greaterThanOrEqualTo: view.heightAnchor)
         ])
         
         setupCardContent()

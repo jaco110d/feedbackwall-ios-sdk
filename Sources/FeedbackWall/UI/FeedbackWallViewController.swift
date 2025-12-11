@@ -272,33 +272,29 @@ final class FeedbackWallViewController: UIViewController {
     }
     
     private func setupFullscreenLayout() {
-        // No dim view for fullscreen - fill entire screen
+        // Simple fullscreen layout - like a normal app screen
         view.backgroundColor = ThemeColorResolver.backgroundColor(from: survey.theme)
         
-        // Add scroll view that fills the entire screen (ignoring safe area)
+        // Card view styling (no shadow, no corner radius)
+        cardView.layer.cornerRadius = 0
+        cardView.layer.shadowOpacity = 0
+        
+        // Add scroll view for keyboard handling, pinned to safe area top
         view.addSubview(scrollView)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
-        // Configure scroll view to respect safe area for content
-        scrollView.contentInsetAdjustmentBehavior = .always
-        
-        // Add card view (will fill the screen, no corner radius, no shadow)
+        // Add card view inside scroll view - content sizes naturally from top
         scrollView.addSubview(cardView)
-        cardView.layer.cornerRadius = 0
-        cardView.layer.shadowOpacity = 0
-        
         NSLayoutConstraint.activate([
             cardView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             cardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            cardView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            // Ensure card fills at least the full screen height
-            cardView.heightAnchor.constraint(greaterThanOrEqualTo: view.heightAnchor)
+            cardView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
         ])
         
         setupCardContent()

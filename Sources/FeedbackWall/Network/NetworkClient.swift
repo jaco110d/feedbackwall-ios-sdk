@@ -51,8 +51,9 @@ final class NetworkClient {
         configuration.waitsForConnectivity = false
         
         // Disable HTTP/3 (QUIC) to avoid connection issues in iOS simulator
+        // Using KVC to maintain backward compatibility with older deployment targets
         if #available(iOS 14.5, *) {
-            configuration.assumesHTTP3Capable = false
+            configuration.setValue(false, forKey: "assumesHTTP3Capable")
         }
         
         self.session = URLSession(configuration: configuration)

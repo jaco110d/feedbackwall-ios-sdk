@@ -49,12 +49,8 @@ final class NetworkClient {
         configuration.timeoutIntervalForRequest = 2.0
         configuration.timeoutIntervalForResource = 4.0
         configuration.waitsForConnectivity = false
-        
-        // Disable HTTP/3 (QUIC) to avoid connection issues in iOS simulator
-        // Using KVC to maintain backward compatibility with older deployment targets
-        if #available(iOS 14.5, *) {
-            configuration.setValue(false, forKey: "assumesHTTP3Capable")
-        }
+        // Disable connection pooling to avoid QUIC connection reuse issues
+        configuration.httpMaximumConnectionsPerHost = 1
         
         self.session = URLSession(configuration: configuration)
     }
